@@ -45,13 +45,6 @@ To get a local copy up and running, follow these steps.
    cd backend
    npm install
    ```
-   *Create a `.env` file in the `backend` directory and add your variables:*
-   ```env
-   PORT=5000
-   MONGO_URI=mongodb://localhost:27017/sprintplans
-   JWT_SECRET=your_super_secret_jwt_key
-   NODE_ENV=development
-   ```
    *Start the backend server:*
    ```bash
    npm run dev
