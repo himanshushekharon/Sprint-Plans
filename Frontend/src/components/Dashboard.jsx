@@ -68,7 +68,7 @@ import CreateTaskModal from './dashboard/CreateTaskModal';
 import Tasks from './dashboard/Tasks';
 import Messages from './dashboard/Messages';
 import SettingsPage from './dashboard/SettingsPage';
-
+import { createProject, createTeam, createTask, addTeamMember, removeTeamMember, updateProject, deleteProject, updateTask, deleteTask } from '../services/api';
 
 // --- Main Dashboard Component ---
 const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' } }) => {
@@ -95,94 +95,206 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
         setTimeout(() => setNotification(null), 3000);
     };
 
-    const addProject = (p) => {
-        setProjects([p, ...projects]);
-        setActiveModal(null);
-        showNotification("Project created successfully!");
+    const addProject = async (p) => {
+        try {
+            const newProject = await createProject({
+                name: p.name,
+                team: p.team,
+                deadline: p.deadline,
+                progress: p.progress,
+                status: p.status,
+                color: p.color
+            });
+            setProjects([{ ...newProject, id: newProject._id }, ...projects]);
+            setActiveModal(null);
+            showNotification("Project created successfully!");
+            return true;
+        } catch (error) {
+            console.error("Error creating project:", error);
+            showNotification("Failed to create project");
+            return false;
+        }
     };
 
-    const addTeam = (t) => {
-        setTeams([t, ...teams]);
-        setActiveModal(null);
-        showNotification("Team created successfully!");
+    const addTeam = async (t) => {
+        try {
+            const newTeam = await createTeam({
+                name: t.name,
+                membersList: [],
+                assignedProjects: [],
+                color: t.color,
+                status: 'Active'
+            });
+            setTeams([{ ...newTeam, id: newTeam._id }, ...teams]);
+            setActiveModal(null);
+            showNotification("Team created successfully!");
+            return true;
+        } catch (error) {
+            console.error("Error creating team:", error);
+            showNotification("Failed to create team");
+            return false;
+        }
     };
 
-    const handleAddMember = (memberData) => {
+    const handleAddMember = async (memberData) => {
         if (!selectedTeam) return;
 
-        const newMember = { name: memberData.name, role: memberData.role };
+        try {
+            const updatedTeam = await addTeamMember(selectedTeam._id || selectedTeam.id, memberData);
 
-        setTeams(teams.map(t => {
-            if (t.id === selectedTeam.id) {
-                // Merge projects without duplicates
-                const uniqueProjects = Array.from(new Set([...(t.assignedProjects || []), ...memberData.projects]));
-                return {
-                    ...t,
-                    members: t.members + 1,
-                    membersList: [...(t.membersList || []), newMember],
-                    assignedProjects: uniqueProjects
-                };
-            }
-            return t;
-        }));
+            // For optimistic UI or if you get back the full team, you can update local state
+            // Let's assume the backend correctly adds it or we reload team on next fetch.
+            // For now, let's update it locally immediately so it's smooth
+            const newMember = { name: memberData.name, role: memberData.role, email: memberData.email };
 
-        showNotification(`${memberData.name} added to ${selectedTeam.name}`);
+            setTeams(teams.map(t => {
+                if (t.id === selectedTeam.id || t._id === selectedTeam._id) {
+                    const uniqueProjects = Array.from(new Set([...(t.assignedProjects || []), ...memberData.projects]));
+                    return {
+                        ...t,
+                        members: (t.membersList?.length || 0) + 1,
+                        membersList: [...(t.membersList || []), newMember],
+                        assignedProjects: uniqueProjects
+                    };
+                }
+                return t;
+            }));
+
+            showNotification(`${memberData.name} added to ${selectedTeam.name}`);
+            return true;
+        } catch (error) {
+            console.error("Error adding member:", error);
+            showNotification("Failed to add member");
+            return false;
+        }
     };
 
-    const handleRemoveMember = (teamId, memberName) => {
-        setTeams(teams.map(t => {
-            if (t.id === teamId) {
-                return {
-                    ...t,
-                    members: Math.max(0, t.members - 1),
-                    membersList: (t.membersList || []).filter(m => (typeof m === 'object' ? m.name : m) !== memberName)
-                };
+    const handleRemoveMember = async (teamId, memberName) => {
+        try {
+            const t = teams.find(team => team._id === teamId || team.id === teamId);
+            const memberObj = t?.membersList?.find(m => m.name === memberName || m === memberName);
+            const identifier = memberObj?._id || memberObj?.email || memberName;
+
+            if (identifier) {
+                await removeTeamMember(teamId, identifier);
             }
-            return t;
-        }));
-        showNotification(`${memberName} removed from team`);
+
+            setTeams(teams.map(t => {
+                if (t.id === teamId || t._id === teamId) {
+                    return {
+                        ...t,
+                        members: Math.max(0, (t.membersList?.length || 1) - 1),
+                        membersList: (t.membersList || []).filter(m => (typeof m === 'object' ? m.name : m) !== memberName)
+                    };
+                }
+                return t;
+            }));
+            showNotification(`${memberName} removed from team`);
+        } catch (error) {
+            console.error("Error removing member:", error);
+            showNotification("Failed to remove member");
+        }
     };
 
-    const handleUpdateTeamProjects = (teamId, updatedProjects) => {
-        setTeams(teams.map(t => t.id === teamId ? { ...t, assignedProjects: updatedProjects } : t));
+    const handleUpdateTeamProjects = async (teamId, updatedProjects) => {
+        setTeams(teams.map(t => (t.id === teamId || t._id === teamId) ? { ...t, assignedProjects: updatedProjects } : t));
         showNotification("Team projects updated successfully");
-    };
-    const addTask = (ta) => { setTasks([ta, ...tasks]); setActiveModal(null); setPrefilledProject(null); };
-    const moveTask = (id, newStatus) => setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
-    const toggleTaskCompletion = (id) => {
-        setTasks(tasks.map(t => {
-            if (t.id === id) {
-                const newStatus = t.status === 'Completed' ? 'Pending' : 'Completed';
-                return {
-                    ...t,
-                    status: newStatus,
-                    completedAt: newStatus === 'Completed' ? new Date().toISOString() : null
-                };
-            }
-            return t;
-        }));
+        // TODO: Backend API for updating team projects
     };
 
-    const handleDeleteTask = (id) => {
+    const addTask = async (ta) => {
+        try {
+            // Need the project ID from its name to associate in DB
+            const projectObj = projects.find(p => p.name === ta.project);
+            if (!projectObj) throw new Error("Project not found");
+
+            const newTask = await createTask({
+                title: ta.title,
+                description: ta.description,
+                status: ta.status,
+                deadline: ta.deadline,
+                priority: ta.priority,
+                project: projectObj._id,
+                assignedTo: ta.member // assuming assignedTo is needed by backend or we wait for backend updates mapped to member
+            });
+            // We append the project name for frontend display since backend might return ID
+            setTasks([{ ...newTask, id: newTask._id, project: ta.project, member: ta.member }, ...tasks]);
+            setActiveModal(null);
+            setPrefilledProject(null);
+            showNotification("Task created successfully!");
+            return true;
+        } catch (error) {
+            console.error("Error creating task:", error);
+            showNotification("Failed to create task");
+            return false;
+        }
+    };
+
+    const moveTask = async (id, newStatus) => {
+        const oldTasks = [...tasks];
+        try {
+            const progress = newStatus === 'Completed' ? 100 : (newStatus === 'In Progress' ? 50 : 0);
+            setTasks(tasks.map(t => (t.id === id || t._id === id) ? { ...t, status: newStatus, progress } : t));
+            await updateTask(id, { status: newStatus, progress });
+        } catch (error) {
+            console.error("Error updating task status", error);
+            showNotification("Failed to update task status");
+            setTasks(oldTasks);
+        }
+    };
+
+    const toggleTaskCompletion = async (id) => {
+        const taskToUpdate = tasks.find(t => t.id === id || t._id === id);
+        if (!taskToUpdate) return;
+
+        const newStatus = taskToUpdate.status === 'Completed' ? 'Pending' : 'Completed';
+
+        try {
+            const progress = newStatus === 'Completed' ? 100 : 0;
+            setTasks(tasks.map(t => {
+                if (t.id === id || t._id === id) {
+                    return {
+                        ...t,
+                        status: newStatus,
+                        progress,
+                        completedAt: newStatus === 'Completed' ? new Date().toISOString() : null
+                    };
+                }
+                return t;
+            }));
+            await updateTask(id, { status: newStatus, progress, completedAt: newStatus === 'Completed' ? new Date().toISOString() : null });
+        } catch (error) {
+            console.error("Error updating task completion", error);
+        }
+    };
+
+    const handleDeleteTask = async (id) => {
         if (window.confirm("Are you sure you want to delete this task?")) {
-            setTasks(tasks.filter(t => t.id !== id));
-            showNotification("Task deleted successfully");
+            try {
+                await deleteTask(id);
+                setTasks(tasks.filter(t => t.id !== id && t._id !== id));
+                showNotification("Task deleted successfully");
+            } catch (error) {
+                console.error("Error deleting task", error);
+                showNotification("Failed to delete task");
+            }
         }
     };
 
     const handleDeleteTeam = (id) => {
-        const teamToDelete = teams.find(t => t.id === id);
+        const teamToDelete = teams.find(t => t.id === id || t._id === id);
         if (teamToDelete) {
             if (window.confirm(`Are you sure you want to delete the team "${teamToDelete.name}"? Associated tasks will also be removed.`)) {
 
                 // 1. Remove team from state
-                setTeams(teams.filter(t => t.id !== id));
+                setTeams(teams.filter(t => t.id !== id && t._id !== id));
 
                 // 2. Remove associated tasks if linked (by team member name, or team name)
                 const teamMemberNames = (teamToDelete.membersList || []).map(m => typeof m === 'object' ? m.name : m);
                 setTasks(tasks.filter(t => !teamMemberNames.includes(t.member) && t.team !== teamToDelete.name));
 
                 showNotification("Team deleted successfully");
+                // TODO: Delete team API
             }
         }
     };
@@ -866,7 +978,7 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                     font-size: 0.85rem; 
                     text-transform: uppercase; 
                     letter-spacing: 0.06em; 
-                    color: rgba(148, 163, 184, 0.4); 
+                    color: var(--text-dim); 
                     border-bottom: 1px solid var(--glass-border); 
                 }
                 .projects-table td { padding: 2rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
@@ -936,7 +1048,7 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                 .timeline-content { display: flex; flex-direction: column; gap: 0.4rem; }
                 .timeline-content p { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; }
                 .timeline-content .subtext { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; font-weight: 500; }
-                .timeline-content .time { font-size: 0.8rem; color: rgba(148, 163, 184, 0.5); margin-top: 0.4rem; font-weight: 700; }
+                .timeline-content .time { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.4rem; font-weight: 700; }
 
                 .placeholder-view {
                     display: flex;
@@ -1808,11 +1920,12 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                     border: 1px solid var(--glass-border);
                     box-shadow: var(--card-shadow);
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    overflow: hidden;
+                    overflow: visible;
                 }
                 .task-card:hover {
                     box-shadow: var(--card-shadow);
                     border-color: rgba(var(--primary-rgb), 0.35);
+                    z-index: 10;
                 }
 
                 /* Priority Indicator Bar */
@@ -1952,7 +2065,7 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                 .task-progress-bar {
                     flex: 1;
                     height: 6px;
-                    background: rgba(255, 255, 255, 0.05);
+                    background: var(--glass-border);
                     border-radius: 100px;
                     overflow: hidden;
                     position: relative;
@@ -1992,6 +2105,8 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                     padding: 1rem 1.5rem;
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                     background: rgba(0, 0, 0, 0.1);
+                    border-bottom-left-radius: var(--border-radius);
+                    border-bottom-right-radius: var(--border-radius);
                 }
 
                 /* Deadline Badge */
@@ -2037,20 +2152,67 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                     height: 36px;
                     border-radius: 50%;
                     background: var(--glass-bg);
-                    border: 2px solid rgba(255, 255, 255, 0.15);
+                    border: 2px solid var(--glass-border);
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     font-size: 0.75rem;
                     font-weight: 800;
-                    color: white;
+                    color: var(--text-main);
                     cursor: pointer;
                     box-shadow: var(--card-shadow);
                     transition: all 0.3s;
+                    position: relative;
                 }
                 .member-avatar-circle:hover {
                     box-shadow: var(--card-shadow);
-                    border-color: rgba(255, 255, 255, 0.3);
+                    border-color: var(--primary);
+                    color: var(--primary);
+                }
+                
+                .avatar-tooltip {
+                    position: absolute;
+                    bottom: 125%;
+                    left: 50%;
+                    transform: translateX(-50%) translateY(10px) scale(0.9);
+                    background: var(--bg-dark);
+                    border: 1px solid var(--glass-border);
+                    color: #fff;
+                    padding: 6px 12px;
+                    border-radius: 8px;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    opacity: 0;
+                    visibility: hidden;
+                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    white-space: nowrap;
+                    pointer-events: none;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    z-index: 50;
+                    letter-spacing: 0.02em;
+                }
+                html[data-theme='light'] .avatar-tooltip {
+                    background: white;
+                    color: #0f172a;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                }
+                .avatar-tooltip::after {
+                    content: '';
+                    position: absolute;
+                    top: 100%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    border-width: 5px;
+                    border-style: solid;
+                    border-color: var(--bg-dark) transparent transparent transparent;
+                }
+                html[data-theme='light'] .avatar-tooltip::after {
+                    border-color: white transparent transparent transparent;
+                }
+                .member-avatar-circle:hover .avatar-tooltip {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateX(-50%) translateY(0) scale(1);
                 }
 
                 /* Grip Icon */

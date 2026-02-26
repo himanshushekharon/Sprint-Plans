@@ -57,6 +57,7 @@ import {
 import { useData } from '../../context/DataContext';
 import AnimatedCounter from './AnimatedCounter';
 import Projects from './Projects';
+import AnimatedSelect from './AnimatedSelect';
 
 // --- Analytics Components ---
 const AnalyticsSection = ({ projects, tasks }) => {
@@ -106,32 +107,34 @@ const AnalyticsSection = ({ projects, tasks }) => {
     const getLineData = () => {
         if (projects.length === 0) return new Array(7).fill(0);
 
-        if (selectedProjectId === 'all') {
-            // Calculate Average Progress of all active projects
-            const currentAvg = projects.reduce((acc, p) => acc + (p.progress || 0), 0) / projects.length;
+        return last7Days.map((day, i) => {
+            if (selectedProjectId === 'all') {
+                if (tasks.length === 0) return 0;
 
-            // Simulating a history curve that leads to the current average
-            // If we have real task completion data, we could use that here.
-            return last7Days.map((_, i) => {
-                const growthFactor = (0.7 + (i * 0.05)); // Slowly trends upward
-                return Math.round(currentAvg * growthFactor);
-            });
-        } else {
-            // Show progress for a specific project
-            const project = projects.find(p => p.id.toString() === selectedProjectId.toString());
-            if (!project) return new Array(7).fill(0);
+                // Real Data: calculate the percentage of total tasks completed up to this day
+                const completedByDay = tasks.filter(t => {
+                    if (t.status !== 'Completed') return false;
+                    const taskDate = t.updatedAt ? new Date(t.updatedAt).getTime() : new Date().getTime();
+                    return taskDate <= new Date(day.iso).getTime() + 86400000; // End of the day
+                }).length;
 
-            const currentProgress = project.progress || 0;
-            // Back-calculate trend based on tasks completed in the last 7 days if available
-            return last7Days.map((dateObj, i) => {
-                const dayIndex = i - 6; // 0 for today, -1 for yesterday, etc.
-                if (dayIndex === 0) return currentProgress;
+                return Math.round((completedByDay / tasks.length) * 100);
+            } else {
+                const project = projects.find(p => p.id === selectedProjectId || p._id === selectedProjectId);
+                if (!project) return 0;
 
-                // Simulate historical progress
-                const factor = 1 - (Math.abs(dayIndex) * 0.08);
-                return Math.max(0, Math.round(currentProgress * factor));
-            });
-        }
+                const projectTasks = tasks.filter(t => t.projectId === (project._id || project.id) || t.project === project.name);
+                if (projectTasks.length === 0) return 0;
+
+                const completedByDay = projectTasks.filter(t => {
+                    if (t.status !== 'Completed') return false;
+                    const taskDate = t.updatedAt ? new Date(t.updatedAt).getTime() : new Date().getTime();
+                    return taskDate <= new Date(day.iso).getTime() + 86400000;
+                }).length;
+
+                return Math.round((completedByDay / projectTasks.length) * 100);
+            }
+        });
     };
 
     const lineData = getLineData();
@@ -154,8 +157,8 @@ const AnalyticsSection = ({ projects, tasks }) => {
     // 2. Bar Chart Data - Real task counts per project
     const barData = projects.slice(0, 5).map(p => {
         const projectTasks = tasks.filter(t =>
-            t.project === p.name ||
-            (t.title && t.title.toLowerCase().includes(p.name.toLowerCase().split(' ')[0]))
+            t.projectId === (p._id || p.id) ||
+            t.project === p.name
         );
         return {
             name: p.name.length > 10 ? p.name.substring(0, 8) + '...' : p.name,
@@ -165,25 +168,34 @@ const AnalyticsSection = ({ projects, tasks }) => {
     });
 
     // 3. Donut Chart Data
-    const statusCounts = {
-        'On Track': projects.filter(p => p.status === 'On Track').length,
-        'Delayed': projects.filter(p => p.status === 'Delayed').length,
-        'Completed': projects.filter(p => p.status === 'Nearly Done' || p.status === 'Completed').length,
-        'Just Started': projects.filter(p => p.status === 'Just Started').length
-    };
-    const donutData = [
-        { label: 'On Track', value: statusCounts['On Track'], color: '#6366f1' },
-        { label: 'Delayed', value: statusCounts['Delayed'], color: '#f43f5e' },
-        { label: 'Completed', value: statusCounts['Completed'], color: '#10b981' },
-        { label: 'Started', value: statusCounts['Just Started'], color: '#f59e0b' }
-    ].filter(d => d.value > 0);
+    const donutData = projects.slice(0, 5).map(p => {
+        const projectTasks = tasks.filter(t => t.projectId === (p._id || p.id) || t.project === p.name);
+        const completedTasks = projectTasks.filter(t => t.status === 'Completed').length;
+        const progress = projectTasks.length > 0 ? Math.round((completedTasks / projectTasks.length) * 100) : (p.progress || 0);
+
+        return {
+            label: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
+            value: progress === 0 ? 2 : progress, // Minimum value of 2 so a 0% progress project still visually shows a tiny empty slice
+            realProgress: progress,
+            color: p.color || 'var(--primary)'
+        };
+    }).filter(d => d.value > 0);
 
     const totalStatusCount = projects.length;
-    const totalStatus = totalStatusCount || 1; // Avoid division by zero
+    const totalStatus = donutData.reduce((acc, curr) => acc + curr.value, 0) || 1; // Avoid division by zero
 
-    const selectedProjectColor = selectedProjectId === 'all'
-        ? 'var(--primary)'
-        : (projects.find(p => p.id.toString() === selectedProjectId.toString())?.color || 'var(--primary)');
+    const isAll = selectedProjectId === 'all';
+
+    // Primary fallback color matching our app
+    const primaryFallback = 'var(--primary)';
+    const selectedProjectColor = isAll
+        ? primaryFallback
+        : (projects.find(p => p.id.toString() === selectedProjectId.toString())?.color || primaryFallback);
+
+    // Gorgeous gradient colors just for "Average Velocity" chart
+    const gradientStart = isAll ? '#6366f1' : selectedProjectColor; // Primary Indigo
+    const gradientMid = isAll ? '#818cf8' : selectedProjectColor;   // Lighter Indigo
+    const gradientEnd = isAll ? '#4f46e5' : selectedProjectColor;   // Deep Indigo
 
     return (
         <motion.div
@@ -199,27 +211,32 @@ const AnalyticsSection = ({ projects, tasks }) => {
                 animate={floatingAnimation}
                 className="analytics-card glass hover-glow-card"
                 whileHover={{ y: -12, transition: { duration: 0.3 } }}
+                style={{ position: 'relative', zIndex: 50 }}
             >
                 <motion.div
                     className="card-bg-glow"
-                    animate={{ background: `radial-gradient(circle at 20% 20%, ${selectedProjectColor}33, transparent 50%)` }}
+                    animate={{
+                        background: isAll
+                            ? `radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.15), rgba(129,140,248,0.10), transparent 70%)`
+                            : `radial-gradient(circle at 20% 20%, ${selectedProjectColor}33, transparent 50%)`
+                    }}
                 ></motion.div>
                 <div className="card-header">
-                    <div className="header-info">
+                    <div className="header-info" style={{ flex: 1, paddingRight: '1rem' }}>
                         <h3>Sprint <span className="accent-text">Velocity</span></h3>
-                        <p>{selectedProjectId === 'all' ? 'Team performance' : 'Project progress'} over the last 7 days</p>
+                        <p style={{ margin: 0, lineHeight: 1.4 }}>{selectedProjectId === 'all' ? 'Team performance' : 'Project progress'} over the last 7 days</p>
                     </div>
                     <div className="card-controls" style={{ display: 'flex', gap: '8px' }}>
-                        <select
-                            value={selectedProjectId}
-                            onChange={(e) => setSelectedProjectId(e.target.value)}
-                            className="chart-select"
-                        >
-                            <option value="all">Average Velocity</option>
-                            {projects.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                        </select>
+                        <div style={{ minWidth: '180px' }}>
+                            <AnimatedSelect
+                                value={selectedProjectId}
+                                onChange={(e) => setSelectedProjectId(e.target.value)}
+                                options={[
+                                    { value: 'all', label: 'Average Velocity' },
+                                    ...projects.map(p => ({ value: p.id, label: p.name }))
+                                ]}
+                            />
+                        </div>
                         <Activity size={18} className="dim" />
                     </div>
                 </div>
@@ -228,12 +245,13 @@ const AnalyticsSection = ({ projects, tasks }) => {
                         <svg key={selectedProjectId} width="100%" height="160" viewBox="0 0 420 160" className="chart-svg">
                             <defs>
                                 <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                                    <stop offset="0%" stopColor={selectedProjectColor} />
-                                    <stop offset="100%" stopColor={selectedProjectColor} />
+                                    <stop offset="0%" stopColor={gradientStart} />
+                                    {isAll && <stop offset="50%" stopColor={gradientMid} />}
+                                    <stop offset="100%" stopColor={gradientEnd} />
                                 </linearGradient>
                                 <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor={selectedProjectColor} stopOpacity="0.3" />
-                                    <stop offset="100%" stopColor={selectedProjectColor} stopOpacity="0" />
+                                    <stop offset="0%" stopColor={isAll ? gradientMid : selectedProjectColor} stopOpacity="0.35" />
+                                    <stop offset="100%" stopColor={gradientStart} stopOpacity="0" />
                                 </linearGradient>
                                 <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
                                     {/* Flat chart path without glow */}
@@ -258,12 +276,18 @@ const AnalyticsSection = ({ projects, tasks }) => {
                                 d={linePath}
                                 fill="none"
                                 stroke="url(#lineGradient)"
-                                strokeWidth="3"
+                                strokeWidth={isAll ? "4" : "3"}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 initial={{ pathLength: 0 }}
                                 whileInView={{ pathLength: 1 }}
-                                transition={{ duration: 2, ease: "easeInOut" }}
+                                animate={isAll ? {
+                                    filter: ['drop-shadow(0 0 6px #6366f1)', 'drop-shadow(0 0 12px #818cf8)', 'drop-shadow(0 0 6px #6366f1)']
+                                } : {}}
+                                transition={{
+                                    pathLength: { duration: 2, ease: "easeInOut" },
+                                    filter: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+                                }}
                             />
                             {/* Data points */}
                             {linePoints.map((p, i) => (
@@ -330,27 +354,44 @@ const AnalyticsSection = ({ projects, tasks }) => {
                     </div>
                     <BarChart2 size={18} className="dim" />
                 </div>
-                <div className="bar-chart-container">
+                <div className="bar-chart-container" style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-end', height: '180px', padding: '1rem', marginTop: '1.5rem' }}>
                     {barData.map((bar, i) => (
-                        <div key={i} className="bar-group">
-                            <div className="bar-rail">
+                        <div key={i} className="bar-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                            <div className="bar-rail" style={{
+                                height: '130px',
+                                width: '12px',
+                                backgroundColor: 'rgba(255,255,255,0.08)',
+                                borderRadius: '20px',
+                                display: 'flex',
+                                alignItems: 'flex-end',
+                                overflow: 'hidden',
+                                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                            }}>
                                 <motion.div
                                     className="bar-fill"
                                     style={{
-                                        background: bar.color,
+                                        width: '100%',
+                                        background: bar.color || 'var(--primary)',
+                                        borderRadius: '20px',
+                                        boxShadow: `0 0 12px ${bar.color || 'var(--primary)'}`
                                     }}
                                     initial={{ height: 0 }}
-                                    whileInView={{ height: `${bar.count * 12}%` }}
+                                    whileInView={{ height: `${Math.min(100, Math.max(15, bar.count * 15))}%` }}
                                     whileHover={{
-                                        filter: 'brightness(1.4) drop-shadow(0 0 10px white)',
-                                        scaleX: 1.25,
+                                        filter: 'brightness(1.5)',
                                         transition: { duration: 0.2 }
                                     }}
-                                    transition={{ duration: 1, delay: 0.3 + i * 0.1, ease: "circOut" }}
+                                    transition={{ duration: 1.5, delay: 0.3 + i * 0.1, type: "spring", stiffness: 60 }}
                                 />
-                                <div className="bar-glow-effect"></div>
                             </div>
-                            <span className="bar-label">{bar.name}</span>
+                            <span className="bar-label" style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--text-dim)',
+                                transform: 'rotate(-25deg)',
+                                whiteSpace: 'nowrap',
+                                fontWeight: 700,
+                                letterSpacing: '0.05em'
+                            }}>{bar.name}</span>
                         </div>
                     ))}
                 </div>
@@ -363,60 +404,68 @@ const AnalyticsSection = ({ projects, tasks }) => {
                 className="analytics-card glass hover-glow-card"
                 whileHover={{ y: -12, transition: { duration: 0.3 } }}
             >
-                <div className="card-bg-glow" style={{ background: 'radial-gradient(circle at 50% 50%, #10b98122, transparent 60%)' }}></div>
+                <div className="card-bg-glow" style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03), transparent 70%)' }}></div>
                 <div className="card-header">
                     <div className="header-info">
-                        <h3>Project <span className="accent-text">Health</span></h3>
-                        <p>Current lifecycle distribution</p>
+                        <h3>Project <span className="accent-text">Progress</span></h3>
+                        <p>Progress by active project</p>
                     </div>
                     <PieChart size={18} className="dim" />
                 </div>
-                <div className="donut-content">
-                    <div className="donut-svg-wrapper">
-                        <svg width="150" height="150" viewBox="0 0 40 40">
-                            <circle cx="20" cy="20" r="16" fill="transparent" stroke="var(--glass-border)" strokeWidth="5" />
+                <div className="donut-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2.5rem', marginTop: '1.5rem' }}>
+                    <div className="donut-svg-wrapper" style={{ position: 'relative', width: '220px', height: '220px' }}>
+                        <svg width="220" height="220" viewBox="-12 -12 64 64" style={{ transform: 'rotate(-90deg)', filter: 'drop-shadow(0px 8px 15px rgba(0,0,0,0.4))', display: 'block' }}>
+                            <circle cx="20" cy="20" r="18" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="6" />
                             {donutData.reduce((acc, curr, i) => {
                                 const offset = acc.totalOffset;
-                                const dashArray = `${(curr.value / totalStatus) * 100} 100`;
+                                const strokeDasharray = `${(curr.value / totalStatus) * 113.097} 113.097`;
                                 acc.elements.push(
                                     <motion.circle
                                         key={i}
-                                        cx="20" cy="20" r="16"
+                                        cx="20" cy="20" r="18"
                                         fill="transparent"
                                         stroke={curr.color}
-                                        strokeWidth="5"
-                                        strokeDasharray={dashArray}
+                                        strokeWidth="6"
+                                        strokeDasharray={strokeDasharray}
                                         strokeDashoffset={-offset}
                                         strokeLinecap="round"
-                                        initial={{ strokeDashoffset: 100 }}
+                                        initial={{ strokeDashoffset: 113.097 }}
                                         whileInView={{ strokeDashoffset: -offset }}
-                                        transition={{ duration: 1.5, delay: 0.5, ease: "circOut" }}
-                                        whileHover={{ strokeWidth: 7, transition: { duration: 0.2 } }}
+                                        transition={{ duration: 1.5, delay: 0.5 + (i * 0.2), ease: "circOut" }}
+                                        whileHover={{ scale: 1.08, strokeWidth: 8, transition: { duration: 0.2, type: "spring", stiffness: 300 } }}
+                                        style={{ transformOrigin: '20px 20px', filter: `drop-shadow(0 0 4px ${curr.color}) drop-shadow(0 0 12px ${curr.color}60)`, cursor: 'pointer' }}
                                     />
                                 );
-                                acc.totalOffset += (curr.value / totalStatus) * 100;
+                                acc.totalOffset += (curr.value / totalStatus) * 113.097;
                                 return acc;
                             }, { elements: [], totalOffset: 0 }).elements}
                         </svg>
-                        <div className="donut-center">
-                            <span className="total-num pulse-text"><AnimatedCounter value={totalStatusCount} /></span>
-                            <span className="total-lbl">Projects</span>
+                        <div className="donut-center" style={{
+                            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+                            zIndex: 2, width: '100%'
+                        }}>
+                            <span className="total-num pulse-text" style={{ fontSize: '3.5rem', fontWeight: 600, lineHeight: 1, color: 'var(--text-main)' }}><AnimatedCounter value={totalStatusCount} /></span>
+                            <span className="total-lbl" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-dim)', fontWeight: 600, marginTop: '8px' }}>Total Projects</span>
                         </div>
                     </div>
-                    <div className="donut-legend">
+                    <div className="donut-legend" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
                         {donutData.map((item, i) => (
                             <motion.div
                                 key={i}
                                 className="legend-item"
-                                initial={{ opacity: 0, x: 20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
+                                initial={{ opacity: 0, y: 15 }}
+                                whileInView={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.8 + i * 0.1 }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '1rem', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
                             >
-                                <div className="dot-group">
-                                    <div className="dot" style={{ backgroundColor: item.color, boxShadow: `0 0 8px ${item.color}` }}></div>
-                                    <span className="lbl">{item.label}</span>
+                                <div className="dot-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div className="dot" style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: item.color, boxShadow: `0 0 10px ${item.color}` }}></div>
+                                    <span className="lbl" style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                                        {item.label}
+                                    </span>
                                 </div>
-                                <span className="val"><AnimatedCounter value={Math.round((item.value / totalStatus) * 100)} />%</span>
+                                <span className="val" style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>{item.realProgress}%</span>
                             </motion.div>
                         ))}
                     </div>

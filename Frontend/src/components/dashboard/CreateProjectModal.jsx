@@ -55,7 +55,7 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-
+import AnimatedSelect from './AnimatedSelect';
 
 // --- Create Project Modal ---
 const CreateProjectModal = ({ isOpen, onClose, onAdd, teams = [] }) => {
@@ -70,10 +70,12 @@ const CreateProjectModal = ({ isOpen, onClose, onAdd, teams = [] }) => {
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onAdd({ ...formData, id: Date.now() });
-        setFormData({ name: '', team: '', deadline: '', status: 'Just Started', progress: 0, color: '#6366f1' });
+        const success = await onAdd({ ...formData, id: Date.now() });
+        if (success !== false) {
+            setFormData({ name: '', team: '', deadline: '', status: 'Just Started', progress: 0, color: '#6366f1' });
+        }
     };
 
     return (
@@ -106,14 +108,14 @@ const CreateProjectModal = ({ isOpen, onClose, onAdd, teams = [] }) => {
                     <div className="form-row">
                         <div className="form-group">
                             <label>Assigned Team</label>
-                            <select
-                                required
+                            <AnimatedSelect
                                 value={formData.team}
                                 onChange={(e) => setFormData({ ...formData, team: e.target.value })}
-                            >
-                                <option value="" disabled hidden>Select a Team</option>
-                                {teams.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
-                            </select>
+                                placeholder="Select a Team"
+                                options={[
+                                    ...teams.map(t => ({ value: t.name, label: t.name }))
+                                ]}
+                            />
                         </div>
                         <div className="form-group">
                             <label>Deadline</label>

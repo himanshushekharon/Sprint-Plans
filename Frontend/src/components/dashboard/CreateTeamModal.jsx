@@ -68,10 +68,12 @@ const CreateTeamModal = ({ isOpen, onClose, onAdd }) => {
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onAdd({ ...formData, id: Date.now() });
-        setFormData({ name: '', members: 0, projects: 0, color: '#6366f1' });
+        const success = await onAdd({ ...formData, id: Date.now() });
+        if (success !== false) {
+            setFormData({ name: '', members: 0, projects: 0, color: '#6366f1' });
+        }
     };
 
     return (

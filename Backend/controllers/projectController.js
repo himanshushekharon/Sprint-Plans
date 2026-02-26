@@ -22,19 +22,25 @@ const getProjects = async (req, res) => {
 // @access  Private
 const createProject = async (req, res) => {
     try {
-        const { title, description, status, team } = req.body;
+        const { title, name, description, status, team, progress, deadline, color } = req.body;
 
-        if (!title || !description) {
+        const projectTitle = title || name;
+
+        if (!projectTitle) {
             res.status(400);
-            throw new Error('Please add a title and description');
+            throw new Error('Please add a project name');
         }
 
         const project = await Project.create({
-            title,
-            description,
-            status,
+            title: projectTitle,
+            name: projectTitle,
+            description: description || '',
+            status: status || 'Just Started',
+            progress: progress || 0,
+            deadline: deadline || null,
+            color: color || 'var(--primary)',
             owner: req.user.id,
-            team: team || []
+            team: team || 'Unassigned'
         });
 
         res.status(201).json(project);

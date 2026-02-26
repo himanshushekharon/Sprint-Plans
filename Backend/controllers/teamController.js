@@ -1,4 +1,5 @@
 const Team = require('../models/Team');
+const User = require('../models/User');
 
 // @desc    Get all teams created by user
 // @route   GET /api/teams
@@ -6,11 +7,8 @@ const Team = require('../models/Team');
 const getTeams = async (req, res) => {
     try {
         const teams = await Team.find({
-            $or: [
-                { createdBy: req.user.id },
-                { members: req.user.id }
-            ]
-        }).populate('members', 'name email');
+            createdBy: req.user.id
+        });
         res.status(200).json(teams);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -22,7 +20,7 @@ const getTeams = async (req, res) => {
 // @access  Private
 const createTeam = async (req, res) => {
     try {
-        const { name, members } = req.body;
+        const { name, membersList, assignedProjects, color, status } = req.body;
 
         if (!name) {
             res.status(400);
@@ -31,7 +29,11 @@ const createTeam = async (req, res) => {
 
         const team = await Team.create({
             name,
-            members: members || [],
+            membersList: membersList || [],
+            assignedProjects: assignedProjects || [],
+            color: color || '#8b5cf6',
+            status: status || 'Active',
+            members: membersList ? membersList.length : 0,
             createdBy: req.user.id
         });
 
@@ -46,7 +48,7 @@ const createTeam = async (req, res) => {
 // @access  Private
 const addMember = async (req, res) => {
     try {
-        const { userId } = req.body;
+        const { name, email, role, projects } = req.body;
         const team = await Team.findById(req.params.id);
 
         if (!team) {
@@ -59,8 +61,21 @@ const addMember = async (req, res) => {
             throw new Error('User not authorized');
         }
 
-        if (!team.members.includes(userId)) {
-            team.members.push(userId);
+        // Add member to membersList if not already present by email
+        const existingMember = team.membersList.find(m => m.email === email);
+        if (!existingMember && email) {
+            team.membersList.push({ name: name || email.split('@')[0], email, role: role || 'Developer' });
+            team.members = team.membersList.length;
+
+            // Add assigned projects if any
+            if (projects && Array.isArray(projects)) {
+                projects.forEach(p => {
+                    if (!team.assignedProjects.includes(p)) {
+                        team.assignedProjects.push(p);
+                    }
+                });
+            }
+
             await team.save();
         }
 
@@ -75,7 +90,7 @@ const addMember = async (req, res) => {
 // @access  Private
 const removeMember = async (req, res) => {
     try {
-        const { userId } = req.body;
+        const { userId } = req.body; // userId is passed as name or email from frontend
         const team = await Team.findById(req.params.id);
 
         if (!team) {
@@ -88,7 +103,8 @@ const removeMember = async (req, res) => {
             throw new Error('User not authorized');
         }
 
-        team.members = team.members.filter(m => m.toString() !== userId);
+        team.membersList = team.membersList.filter(m => m.name !== userId && m.email !== userId && m._id?.toString() !== userId);
+        team.members = team.membersList.length;
         await team.save();
 
         res.status(200).json(team);
@@ -102,7 +118,7 @@ const removeMember = async (req, res) => {
 // @access  Private
 const getTeamById = async (req, res) => {
     try {
-        const team = await Team.findById(req.params.id).populate('members', 'name email');
+        const team = await Team.findById(req.params.id);
 
         if (!team) {
             res.status(404);

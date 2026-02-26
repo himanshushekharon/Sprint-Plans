@@ -56,6 +56,7 @@ import {
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Tasks from './Tasks';
+import AnimatedSelect from './AnimatedSelect';
 
 // --- Projects Management Component ---
 const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTask, globalSearch = '', onCreateProject }) => {
@@ -64,7 +65,29 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
     const [sortBy, setSortBy] = useState('Newest');
     const [expandedProjectId, setExpandedProjectId] = useState(null);
 
-    const filteredProjects = projects.filter(p => {
+    const getProjectStats = (p) => {
+        const projectTasks = tasks.filter(t =>
+            t.projectId === (p._id || p.id) ||
+            t.project === p.name
+        );
+        const completedCount = projectTasks.filter(t => t.status === 'Completed').length;
+        const totalCount = projectTasks.length;
+        const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+        let status = 'Just Started';
+        if (progress === 100) status = 'Completed';
+        else if (progress > 75) status = 'Nearly Done';
+        else if (progress > 0) status = 'On Track';
+
+        return { progress, status, taskCount: totalCount, projectTasks };
+    };
+
+    const processedProjects = projects.map(p => {
+        const stats = getProjectStats(p);
+        return { ...p, ...stats };
+    });
+
+    const filteredProjects = processedProjects.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(globalSearch.toLowerCase()) ||
             p.team.toLowerCase().includes(globalSearch.toLowerCase());
         const matchesStatus = filterStatus === 'All' || p.status === filterStatus;
@@ -136,43 +159,44 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
+                style={{ position: 'relative', zIndex: 50 }}
             >
                 <div className="controls-right" style={{ width: '100%', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <motion.div
-                            className="filter-select"
                             whileHover={{ scale: 1.02 }}
                             transition={{ type: "spring", stiffness: 400 }}
+                            style={{ minWidth: '160px' }}
                         >
-                            <Filter size={16} className="dim" />
-                            <select
+                            <AnimatedSelect
                                 value={filterStatus}
                                 onChange={(e) => setFilterStatus(e.target.value)}
-                                className="bg-transparent border-none outline-none cursor-pointer"
-                            >
-                                <option value="All">All Status</option>
-                                <option value="On Track">On Track</option>
-                                <option value="Delayed">Delayed</option>
-                                <option value="Nearly Done">Nearly Done</option>
-                                <option value="Just Started">Just Started</option>
-                            </select>
+                                options={[
+                                    { value: 'All', label: 'All Status' },
+                                    { value: 'On Track', label: 'On Track' },
+                                    { value: 'Delayed', label: 'Delayed' },
+                                    { value: 'Nearly Done', label: 'Nearly Done' },
+                                    { value: 'Just Started', label: 'Just Started' }
+                                ]}
+                                icon={Filter}
+                            />
                         </motion.div>
                         <motion.div
-                            className="filter-select"
                             whileHover={{ scale: 1.02 }}
                             transition={{ type: "spring", stiffness: 400 }}
+                            style={{ minWidth: '160px' }}
                         >
-                            <List size={16} className="dim" />
-                            <select
+                            <AnimatedSelect
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="bg-transparent border-none outline-none cursor-pointer"
-                            >
-                                <option value="Newest">Newest First</option>
-                                <option value="Name">Sort by Name</option>
-                                <option value="Progress">Top Progress</option>
-                                <option value="Deadline">Deadline</option>
-                            </select>
+                                options={[
+                                    { value: 'Newest', label: 'Newest First' },
+                                    { value: 'Name', label: 'Sort by Name' },
+                                    { value: 'Progress', label: 'Top Progress' },
+                                    { value: 'Deadline', label: 'Deadline' }
+                                ]}
+                                icon={List}
+                            />
                         </motion.div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -210,7 +234,9 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
                         className="projects-grid"
                     >
                         {filteredProjects.map((project, index) => {
-                            const projectTasks = tasks.filter(t => t.title.toLowerCase().includes(project.name.toLowerCase().split(' ')[0]) || t.project === project.name);
+                            const projectTasks = project.projectTasks;
+                            const displayProgress = project.progress;
+                            const displayStatus = project.status;
                             const isExpanded = expandedProjectId === project.id;
 
                             return (
@@ -239,9 +265,9 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
 
                                     <div className="card-top">
                                         <div className="top-left">
-                                            <span className={`status-tag premium-badge ${project.status.toLowerCase().replace(' ', '-')}`}>
-                                                {getStatusIcon(project.status)}
-                                                <span>{project.status}</span>
+                                            <span className={`status-tag premium-badge ${displayStatus.toLowerCase().replace(' ', '-')}`}>
+                                                {getStatusIcon(displayStatus)}
+                                                <span>{displayStatus}</span>
                                             </span>
                                             {projectTasks.length > 0 && (
                                                 <span className="task-count-badge">
@@ -283,7 +309,7 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
                                         <div className="progress-section premium-progress">
                                             <div className="progress-labels">
                                                 <span className="prog-text">Implementation</span>
-                                                <span className="prog-val">{project.progress}%</span>
+                                                <span className="prog-val">{displayProgress}%</span>
                                             </div>
                                             <div className="progress-bar-bg smooth-rail">
                                                 <motion.div
@@ -293,7 +319,7 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
                                                         boxShadow: `0 0 15px ${project.color}44`
                                                     }}
                                                     initial={{ width: 0 }}
-                                                    animate={{ width: `${project.progress}%` }}
+                                                    animate={{ width: `${displayProgress}%` }}
                                                     transition={{ duration: 1.5, ease: "circOut" }}
                                                 />
                                             </div>
@@ -353,7 +379,7 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
                                                                         <div className="task-info-main">
                                                                             <span className="task-title">{task.title}</span>
                                                                             <div className="task-submeta">
-                                                                                <span className="meta-member">@{task.member.split(' ')[0]}</span>
+                                                                                <span className="meta-member">@{(task.member || 'Member').split(' ')[0]}</span>
                                                                                 <span className="divider-dot"></span>
                                                                                 <span className="meta-date">{formatDate(task.deadline)}</span>
                                                                             </div>

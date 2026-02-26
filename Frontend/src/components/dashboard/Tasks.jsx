@@ -62,8 +62,8 @@ const Tasks = ({ tasks, onCreateTask, onMoveTask, onDeleteTask, globalSearch = '
     const columns = ['Pending', 'In Progress', 'Completed'];
 
     const filteredTasks = tasks.filter(t =>
-        t.title.toLowerCase().includes(globalSearch.toLowerCase()) ||
-        t.description.toLowerCase().includes(globalSearch.toLowerCase())
+        (t.title || '').toLowerCase().includes((globalSearch || '').toLowerCase()) ||
+        (t.description || '').toLowerCase().includes((globalSearch || '').toLowerCase())
     );
 
     const getPriorityColor = (priority) => {
@@ -345,20 +345,20 @@ const Tasks = ({ tasks, onCreateTask, onMoveTask, onDeleteTask, globalSearch = '
                                             </div>
 
                                             {/* Progress Bar (for In Progress tasks) */}
-                                            {task.status === 'In Progress' && (
+                                            {(task.status === 'In Progress' || task.status === 'Completed') && (
                                                 <div className="task-progress-container">
                                                     <div className="task-progress-bar">
                                                         <motion.div
                                                             className="task-progress-fill"
                                                             initial={{ width: 0 }}
-                                                            animate={{ width: '60%' }}
+                                                            animate={{ width: `${task.status === 'Completed' ? 100 : (task.progress || (task.status === 'In Progress' ? 50 : 0))}%` }}
                                                             transition={{ duration: 1, delay: 0.3 }}
                                                             style={{
                                                                 background: `linear-gradient(90deg, ${getPriorityColor(task.priority)}, ${getPriorityColor(task.priority)}dd)`
                                                             }}
                                                         ></motion.div>
                                                     </div>
-                                                    <span className="progress-label">60%</span>
+                                                    <span className="progress-label">{task.status === 'Completed' ? 100 : (task.progress || (task.status === 'In Progress' ? 50 : 0))}%</span>
                                                 </div>
                                             )}
 
@@ -372,11 +372,11 @@ const Tasks = ({ tasks, onCreateTask, onMoveTask, onDeleteTask, globalSearch = '
                                                 </div>
                                                 <motion.div
                                                     className="member-avatar-circle"
-                                                    title={task.member}
                                                     whileHover={{ scale: 1.15, rotate: 5 }}
                                                     transition={{ type: "spring", stiffness: 400 }}
                                                 >
-                                                    {task.member.split(' ').map(n => n[0]).join('')}
+                                                    {(task.member || 'Unassigned Member').split(' ').map(n => n[0]).join('')}
+                                                    <span className="avatar-tooltip">{task.member || 'Unassigned Member'}</span>
                                                 </motion.div>
                                             </div>
 

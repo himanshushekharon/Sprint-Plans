@@ -56,6 +56,7 @@ import {
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Projects from './Projects';
+import AnimatedSelect from './AnimatedSelect';
 
 // --- Teams Management Component ---
 const Teams = ({ teams, tasks = [], onCreateTeam, onDeleteTeam, onAddMemberClick, onRemoveMember, onManageProjectsClick, globalSearch = '' }) => {
@@ -106,6 +107,7 @@ const Teams = ({ teams, tasks = [], onCreateTeam, onDeleteTeam, onAddMemberClick
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
+                style={{ position: 'relative', zIndex: 50 }}
             >
                 <div className="search-wrapper">
                     <Search size={18} className="search-icon" />
@@ -118,23 +120,31 @@ const Teams = ({ teams, tasks = [], onCreateTeam, onDeleteTeam, onAddMemberClick
                 </div>
 
                 <div className="filters-wrapper">
-                    <div className="custom-select-wrapper">
-                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                            <option value="All">All Status</option>
-                            <option value="Active">Active</option>
-                            <option value="Busy">Busy</option>
-                            <option value="Archived">Archived</option>
-                        </select>
-                        <ChevronDown size={14} className="select-arrow" />
+                    <div style={{ minWidth: '150px' }}>
+                        <AnimatedSelect
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            options={[
+                                { value: 'All', label: 'All Status' },
+                                { value: 'Active', label: 'Active' },
+                                { value: 'Busy', label: 'Busy' },
+                                { value: 'Archived', label: 'Archived' }
+                            ]}
+                            icon={Filter}
+                        />
                     </div>
 
-                    <div className="custom-select-wrapper">
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                            <option value="Default">Sort By</option>
-                            <option value="Projects High-Low">Projects Count</option>
-                            <option value="Members High-Low">Member Count</option>
-                        </select>
-                        <ChevronDown size={14} className="select-arrow" />
+                    <div style={{ minWidth: '150px' }}>
+                        <AnimatedSelect
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            options={[
+                                { value: 'Default', label: 'Sort By' },
+                                { value: 'Projects High-Low', label: 'Projects Count' },
+                                { value: 'Members High-Low', label: 'Member Count' }
+                            ]}
+                            icon={List}
+                        />
                     </div>
 
                     <div className="view-toggle">

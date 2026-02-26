@@ -55,7 +55,7 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-
+import AnimatedSelect from './AnimatedSelect';
 
 // --- Create Task Modal ---
 const CreateTaskModal = ({ isOpen, onClose, onAdd, initialProject = null, projects = [], teams = [] }) => {
@@ -64,7 +64,7 @@ const CreateTaskModal = ({ isOpen, onClose, onAdd, initialProject = null, projec
         description: '',
         status: 'Pending',
         deadline: '',
-        member: 'Alex Rivera',
+        member: '',
         priority: 'Medium',
         project: initialProject || ''
     });
@@ -76,11 +76,12 @@ const CreateTaskModal = ({ isOpen, onClose, onAdd, initialProject = null, projec
     }, [initialProject]);
 
     if (!isOpen) return null;
-
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onAdd({ ...formData, id: Date.now() });
-        setFormData({ title: '', description: '', status: 'Pending', deadline: '', member: 'Alex Rivera', priority: 'Medium', project: '' });
+        const success = await onAdd({ ...formData, id: Date.now() });
+        if (success !== false) {
+            setFormData({ title: '', description: '', status: 'Pending', deadline: '', member: '', priority: 'Medium', project: '' });
+        }
     };
 
     // Dynamically filter members based on the selected project's team
@@ -136,15 +137,15 @@ const CreateTaskModal = ({ isOpen, onClose, onAdd, initialProject = null, projec
                                 </div>
                                 <div className="form-group">
                                     <label>Project</label>
-                                    <select
+                                    <AnimatedSelect
                                         value={formData.project}
                                         onChange={(e) => setFormData({ ...formData, project: e.target.value })}
                                         className={initialProject ? 'prefilled-input' : ''}
-                                        required
-                                    >
-                                        <option value="" disabled hidden>Select a Project</option>
-                                        {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                                    </select>
+                                        placeholder="Select a Project"
+                                        options={[
+                                            ...projects.map(p => ({ value: p.name, label: p.name }))
+                                        ]}
+                                    />
                                 </div>
                             </div>
                             <div className="form-group">
@@ -168,40 +169,40 @@ const CreateTaskModal = ({ isOpen, onClose, onAdd, initialProject = null, projec
                                 </div>
                                 <div className="form-group">
                                     <label>Assigned To</label>
-                                    <select
+                                    <AnimatedSelect
                                         value={formData.member}
                                         onChange={(e) => setFormData({ ...formData, member: e.target.value })}
-                                        required
-                                    >
-                                        {!formData.project && <option value="" disabled hidden>Select Project First</option>}
-                                        {formData.project && members.length === 0 && <option value="" disabled hidden>No members in team</option>}
-                                        {formData.project && members.length > 0 && <option value="" disabled hidden>Assign to...</option>}
-                                        {members.map(m => <option key={m} value={m}>{m}</option>)}
-                                    </select>
+                                        placeholder={!formData.project ? "Select Project First" : (formData.project && members.length === 0 ? "No members in team" : "Assign to...")}
+                                        options={[
+                                            ...members.map(m => ({ value: m, label: m }))
+                                        ]}
+                                    />
                                 </div>
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Status</label>
-                                    <select
+                                    <AnimatedSelect
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                    >
-                                        <option>Pending</option>
-                                        <option>In Progress</option>
-                                        <option>Completed</option>
-                                    </select>
+                                        options={[
+                                            { value: 'Pending', label: 'Pending' },
+                                            { value: 'In Progress', label: 'In Progress' },
+                                            { value: 'Completed', label: 'Completed' }
+                                        ]}
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label>Priority</label>
-                                    <select
+                                    <AnimatedSelect
                                         value={formData.priority}
                                         onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                                    >
-                                        <option>Low</option>
-                                        <option>Medium</option>
-                                        <option>High</option>
-                                    </select>
+                                        options={[
+                                            { value: 'Low', label: 'Low' },
+                                            { value: 'Medium', label: 'Medium' },
+                                            { value: 'High', label: 'High' }
+                                        ]}
+                                    />
                                 </div>
                             </div>
                             <div className="modal-footer">

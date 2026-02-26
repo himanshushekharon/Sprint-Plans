@@ -5,10 +5,26 @@ const teamSchema = mongoose.Schema({
         type: String,
         required: [true, 'Please add a team name']
     },
-    members: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+    membersList: [{
+        name: String,
+        email: String,
+        role: String
     }],
+    assignedProjects: [{
+        type: String
+    }],
+    color: {
+        type: String,
+        default: '#8b5cf6'
+    },
+    status: {
+        type: String,
+        default: 'Active'
+    },
+    members: {
+        type: Number,
+        default: 0
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,

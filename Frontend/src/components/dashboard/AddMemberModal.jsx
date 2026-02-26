@@ -56,6 +56,7 @@ import {
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Projects from './Projects';
+import AnimatedSelect from './AnimatedSelect';
 
 // --- Add Member Modal ---
 const AddMemberModal = ({ isOpen, onClose, onAdd, teamName, availableProjects = [] }) => {
@@ -68,11 +69,13 @@ const AddMemberModal = ({ isOpen, onClose, onAdd, teamName, availableProjects = 
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onAdd(formData);
-        onClose();
-        setFormData({ name: '', role: 'Developer', email: '', projects: [] });
+        const success = await onAdd(formData);
+        if (success !== false) {
+            onClose();
+            setFormData({ name: '', role: 'Developer', email: '', projects: [] });
+        }
     };
 
     const toggleProject = (project) => {
@@ -124,12 +127,13 @@ const AddMemberModal = ({ isOpen, onClose, onAdd, teamName, availableProjects = 
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Role</label>
-                                    <select
+                                    <AnimatedSelect
                                         value={formData.role}
                                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                    >
-                                        {roles.map(r => <option key={r} value={r}>{r}</option>)}
-                                    </select>
+                                        options={[
+                                            ...roles.map(r => ({ value: r, label: r }))
+                                        ]}
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label>Email Address</label>
