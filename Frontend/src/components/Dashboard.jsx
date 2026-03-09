@@ -492,7 +492,7 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                             className="profile-group"
                             onClick={() => navigateToSettings('Profile')}
                             style={{ cursor: 'pointer' }}
-                            whileHover={{ scale: 1.02, backgroundColor: 'var(--glass-hover)' }}
+                            whileHover={{ scale: 1.02 }}
                         >
                             <div className="profile-info">
                                 <span className="profile-name">{userProfile.name}</span>
@@ -874,10 +874,31 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                     border-radius: 50px;
                     border: 1px solid var(--glass-border);
                     cursor: pointer;
-                    transition: 0.3s;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
                 }
+                
+                [data-theme='dark'] .profile-group {
+                    background: rgba(var(--bg-rgb, 15, 23, 42), 0.3) !important;
+                    border-color: rgba(255, 255, 255, 0.08) !important;
+                    backdrop-filter: blur(12px);
+                }
+
+                .profile-group:hover { 
+                    background: var(--glass-hover); 
+                    border-color: var(--primary);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                }
+                
+                [data-theme='dark'] .profile-group:hover {
+                    background: rgba(255, 255, 255, 0.08);
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+                }
+
                 .profile-info { display: flex; flex-direction: column; text-align: right; }
-                .profile-name { font-weight: 700; font-size: 0.9rem; color: var(--text-main); }
+                .profile-name { font-weight: 700; font-size: 0.9rem; color: var(--text-main); transition: 0.3s; }
                 .profile-role { font-size: 0.75rem; color: var(--text-dim); }
                 .profile-avatar {
                     width: 40px;
