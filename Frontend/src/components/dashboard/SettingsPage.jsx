@@ -52,7 +52,9 @@ import {
     Camera,
     Mail,
     Phone,
-    ShieldCheck
+    ShieldCheck,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 
@@ -76,6 +78,11 @@ const SettingsPage = ({ theme, toggleTheme, onNotify, onLogout, activeSettingTab
         current: '',
         new: '',
         confirm: ''
+    });
+    const [showPasswords, setShowPasswords] = useState({
+        current: false,
+        new: false,
+        confirm: false
     });
 
     const [contactData, setContactData] = useState({
@@ -207,15 +214,27 @@ const SettingsPage = ({ theme, toggleTheme, onNotify, onLogout, activeSettingTab
                                         accept="image/*"
                                         onChange={handleImageUpload}
                                     />
-                                    <button type="button" className="btn-primary-sm" onClick={() => fileInputRef.current.click()}>
+                                    <motion.button
+                                        type="button"
+                                        className="btn-primary-sm"
+                                        whileHover={{ scale: 1.05, translateY: -2 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => fileInputRef.current.click()}
+                                    >
                                         Change Avatar
-                                    </button>
-                                    <button type="button" className="btn-secondary-sm" onClick={() => {
-                                        setProfileImage(null);
-                                        setUserProfile(prev => ({ ...prev, profileImage: null }));
-                                    }}>
+                                    </motion.button>
+                                    <motion.button
+                                        type="button"
+                                        className="btn-secondary-sm"
+                                        whileHover={{ scale: 1.05, translateY: -2 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => {
+                                            setProfileImage(null);
+                                            setUserProfile(prev => ({ ...prev, profileImage: null }));
+                                        }}
+                                    >
                                         Remove
-                                    </button>
+                                    </motion.button>
                                 </div>
                             </div>
                             <div className="settings-form-grid">
@@ -448,30 +467,55 @@ const SettingsPage = ({ theme, toggleTheme, onNotify, onLogout, activeSettingTab
                                     <div className="input-with-icon">
                                         <Lock size={16} className="input-icon" />
                                         <input
-                                            type="password"
+                                            type={showPasswords.current ? "text" : "password"}
                                             placeholder="••••••••"
                                             value={passwordData.current}
                                             onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
                                         />
+                                        <button
+                                            type="button"
+                                            className="password-toggle-btn"
+                                            onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                                        >
+                                            {showPasswords.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="form-group">
                                     <label>New Password</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Min. 8 characters"
-                                        value={passwordData.new}
-                                        onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
-                                    />
+                                    <div className="input-with-icon no-prefix">
+                                        <input
+                                            type={showPasswords.new ? "text" : "password"}
+                                            placeholder="Min. 8 characters"
+                                            value={passwordData.new}
+                                            onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="password-toggle-btn"
+                                            onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                                        >
+                                            {showPasswords.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="form-group">
                                     <label>Confirm New Password</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Repeat password"
-                                        value={passwordData.confirm}
-                                        onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
-                                    />
+                                    <div className="input-with-icon no-prefix">
+                                        <input
+                                            type={showPasswords.confirm ? "text" : "password"}
+                                            placeholder="Repeat password"
+                                            value={passwordData.confirm}
+                                            onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="password-toggle-btn"
+                                            onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                                        >
+                                            {showPasswords.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div className="section-footer">
@@ -490,22 +534,7 @@ const SettingsPage = ({ theme, toggleTheme, onNotify, onLogout, activeSettingTab
                             </div>
                         </div>
 
-                        <div className="appearance-card glass-dark mt-2">
-                            <div className="setting-control-row">
-                                <div className="control-info">
-                                    <h4>Two-Factor Authentication</h4>
-                                    <p>Add an extra layer of security to your account.</p>
-                                </div>
-                                <div
-                                    className={`theme-toggle-switch ${userProfile.twoFactorEnabled ? 'active' : ''}`}
-                                    onClick={toggleTwoFactor}
-                                >
-                                    <div className={`switch-track ${userProfile.twoFactorEnabled ? 'dark' : ''}`}>
-                                        <div className="switch-thumb">{userProfile.twoFactorEnabled && <Check size={12} />}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+
 
                         <div className="appearance-card glass-dark mt-2">
                             <div className="setting-control-row">

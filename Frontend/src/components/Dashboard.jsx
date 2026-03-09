@@ -1005,18 +1005,44 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                 .nearly-done { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
                 .just-started { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
 
+                .btn-primary-sm {
+                    padding: 0.6rem 1.25rem;
+                    background: var(--primary);
+                    border: 1px solid var(--primary);
+                    border-radius: 10px;
+                    color: white;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                .btn-primary-sm:hover { 
+                    background: var(--primary-hover); 
+                    border-color: var(--primary-hover);
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+                }
+
                 .btn-secondary-sm {
-                    padding: 0.5rem 1.25rem;
+                    padding: 0.6rem 1.25rem;
                     background: var(--glass-bg);
                     border: 1px solid var(--glass-border);
-                    border-radius: 8px;
+                    border-radius: 10px;
                     color: var(--text-main);
                     font-size: 0.85rem;
                     font-weight: 600;
                     cursor: pointer;
-                    transition: 0.3s;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 }
-                .btn-secondary-sm:hover { background: var(--glass-hover); border-color: var(--primary); }
+                .btn-secondary-sm:hover { 
+                    background: var(--glass-hover); 
+                    border-color: var(--primary);
+                    color: var(--primary);
+                }
 
                 .delete-hover:hover { color: #f43f5e !important; background: rgba(244, 63, 94, 0.1) !important; }
 
@@ -3592,6 +3618,38 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                     font-weight: 700;
                     color: var(--text-dim);
                     opacity: 0.8;
+                }
+
+                .password-toggle-btn {
+                    position: absolute;
+                    right: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: transparent;
+                    border: none;
+                    color: var(--text-dim);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 4px;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                    z-index: 5;
+                }
+
+                .password-toggle-btn:hover {
+                    color: var(--primary);
+                    background: rgba(var(--primary-rgb), 0.1);
+                }
+
+                .input-with-icon.no-prefix {
+                    padding-left: 0;
+                }
+
+                .input-with-icon.no-prefix input {
+                    padding-left: 1rem;
+                    padding-right: 2.5rem;
                 }
 
             `}</style>

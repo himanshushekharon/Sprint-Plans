@@ -276,15 +276,7 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
                                             )}
                                         </div>
                                         <div className="card-actions">
-                                            <motion.button
-                                                className="action-btn-styled add-task-btn"
-                                                whileHover={{ scale: 1.1, rotate: 90, backgroundColor: 'rgba(99, 102, 241, 0.2)', color: '#6366f1', borderColor: '#6366f1' }}
-                                                whileTap={{ scale: 0.9 }}
-                                                onClick={(e) => { e.stopPropagation(); onCreateTask(); }}
-                                                title="Add Task"
-                                            >
-                                                <Plus size={18} strokeWidth={3} />
-                                            </motion.button>
+
                                             <motion.button
                                                 className="action-btn-styled delete-project-btn"
                                                 whileHover={{ scale: 1.1, rotate: 90, backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', borderColor: '#ef4444' }}
@@ -349,14 +341,6 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
                                                 <div className="project-tasks-list">
                                                     <div className="tasks-list-header">
                                                         <h4>Management Tasks</h4>
-                                                        <motion.button
-                                                            className="btn-add-mini"
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            onClick={(e) => { e.stopPropagation(); onCreateTask(project.name); }}
-                                                        >
-                                                            <Plus size={14} /> <span>Quick Task</span>
-                                                        </motion.button>
                                                     </div>
 
                                                     {projectTasks.length > 0 ? (
@@ -400,13 +384,7 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
                                                         </div>
                                                     )}
 
-                                                    <button
-                                                        className="btn-add-full-card"
-                                                        onClick={(e) => { e.stopPropagation(); onCreateTask(project.name); }}
-                                                    >
-                                                        <Plus size={16} />
-                                                        <span>Add New Sprint Task</span>
-                                                    </button>
+
                                                 </div>
                                             </motion.div>
                                         )}

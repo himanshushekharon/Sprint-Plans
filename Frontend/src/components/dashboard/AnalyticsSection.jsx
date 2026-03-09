@@ -107,32 +107,53 @@ const AnalyticsSection = ({ projects, tasks }) => {
     const getLineData = () => {
         if (projects.length === 0) return new Array(7).fill(0);
 
-        return last7Days.map((day, i) => {
+        return last7Days.map((day) => {
+            const dayStartTime = new Date(day.iso).getTime();
+            const dayEndTime = dayStartTime + 86400000;
+
             if (selectedProjectId === 'all') {
-                if (tasks.length === 0) return 0;
+                // Average daily completion across all projects
+                const projectDailyShares = projects.map(p => {
+                    const projectTasks = tasks.filter(t =>
+                        t.projectId === (p._id || p.id) ||
+                        t.project === p.name ||
+                        t.project === p.title
+                    );
 
-                // Real Data: calculate the percentage of total tasks completed up to this day
-                const completedByDay = tasks.filter(t => {
-                    if (t.status !== 'Completed') return false;
-                    const taskDate = t.updatedAt ? new Date(t.updatedAt).getTime() : new Date().getTime();
-                    return taskDate <= new Date(day.iso).getTime() + 86400000; // End of the day
-                }).length;
+                    if (projectTasks.length === 0) return 0;
 
-                return Math.round((completedByDay / tasks.length) * 100);
+                    const completedTodayCount = projectTasks.filter(t => {
+                        if (t.status !== 'Completed') return false;
+                        const completionTime = new Date(t.completedAt || t.updatedAt || t.createdAt).getTime();
+                        return completionTime >= dayStartTime && completionTime < dayEndTime;
+                    }).length;
+
+                    return (completedTodayCount / projectTasks.length) * 100;
+                });
+
+                const totalDailyAvg = projectDailyShares.reduce((acc, val) => acc + val, 0) / (projects.length || 1);
+                // Return a boosted value for visual zig-zag if there's activity
+                return Math.round(totalDailyAvg * 5);
             } else {
                 const project = projects.find(p => p.id === selectedProjectId || p._id === selectedProjectId);
                 if (!project) return 0;
 
-                const projectTasks = tasks.filter(t => t.projectId === (project._id || project.id) || t.project === project.name);
+                const projectTasks = tasks.filter(t =>
+                    t.projectId === (project._id || project.id) ||
+                    t.project === project.name ||
+                    t.project === project.title
+                );
+
                 if (projectTasks.length === 0) return 0;
 
-                const completedByDay = projectTasks.filter(t => {
+                const completedTodayCount = projectTasks.filter(t => {
                     if (t.status !== 'Completed') return false;
-                    const taskDate = t.updatedAt ? new Date(t.updatedAt).getTime() : new Date().getTime();
-                    return taskDate <= new Date(day.iso).getTime() + 86400000;
+                    const completionTime = new Date(t.completedAt || t.updatedAt || t.createdAt).getTime();
+                    return completionTime >= dayStartTime && completionTime < dayEndTime;
                 }).length;
 
-                return Math.round((completedByDay / projectTasks.length) * 100);
+                // Daily contribution to project progress
+                return Math.round((completedTodayCount / projectTasks.length) * 100 * 5); // Multiplier for visual zig-zag
             }
         });
     };
@@ -140,18 +161,14 @@ const AnalyticsSection = ({ projects, tasks }) => {
     const lineData = getLineData();
     const linePoints = lineData.map((val, i) => ({
         x: i * 63.3 + 20,
-        y: 150 - (val * 1.2),
+        y: 150 - (Math.min(100, val) * 1.3),
         value: val,
         date: last7Days[i].date
     }));
 
-    // Smooth curve path generator
-    const linePath = linePoints.reduce((acc, point, i, a) => {
-        if (i === 0) return `M ${point.x},${point.y}`;
-        const p0 = a[i - 1];
-        const cp1x = p0.x + (point.x - p0.x) / 2;
-        const cp2x = p0.x + (point.x - p0.x) / 2;
-        return `${acc} C ${cp1x},${p0.y} ${cp2x},${point.y} ${point.x},${point.y}`;
+    // Sharp zig-zag path generator
+    const linePath = linePoints.reduce((acc, point, i) => {
+        return i === 0 ? `M ${point.x},${point.y}` : `${acc} L ${point.x},${point.y}`;
     }, '');
 
     // 2. Bar Chart Data - Real task counts per project
@@ -244,7 +261,7 @@ const AnalyticsSection = ({ projects, tasks }) => {
                     <div style={{ position: 'relative' }}>
                         <svg key={selectedProjectId} width="100%" height="160" viewBox="0 0 420 160" className="chart-svg">
                             <defs>
-                                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                                <linearGradient id="lineGradient" gradientUnits="userSpaceOnUse" x1="20" y1="0" x2="400" y2="0">
                                     <stop offset="0%" stopColor={gradientStart} />
                                     {isAll && <stop offset="50%" stopColor={gradientMid} />}
                                     <stop offset="100%" stopColor={gradientEnd} />
@@ -275,17 +292,25 @@ const AnalyticsSection = ({ projects, tasks }) => {
                             <motion.path
                                 d={linePath}
                                 fill="none"
-                                stroke="url(#lineGradient)"
-                                strokeWidth={isAll ? "4" : "3"}
+                                stroke={isAll ? "url(#lineGradient)" : selectedProjectColor}
+                                strokeWidth={isAll ? 4 : 3}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                initial={{ pathLength: 0 }}
-                                whileInView={{ pathLength: 1 }}
-                                animate={isAll ? {
-                                    filter: ['drop-shadow(0 0 6px #6366f1)', 'drop-shadow(0 0 12px #818cf8)', 'drop-shadow(0 0 6px #6366f1)']
-                                } : {}}
+                                initial={{ pathLength: 0, opacity: 0 }}
+                                animate={{
+                                    pathLength: 1,
+                                    opacity: 1,
+                                    ...(isAll ? {
+                                        filter: [
+                                            'drop-shadow(0 0 6px #6366f1)',
+                                            'drop-shadow(0 0 12px #818cf8)',
+                                            'drop-shadow(0 0 6px #6366f1)'
+                                        ]
+                                    } : {})
+                                }}
                                 transition={{
                                     pathLength: { duration: 2, ease: "easeInOut" },
+                                    opacity: { duration: 1, delay: 0.5 },
                                     filter: { duration: 4, repeat: Infinity, ease: "easeInOut" }
                                 }}
                             />
@@ -297,7 +322,7 @@ const AnalyticsSection = ({ projects, tasks }) => {
                                     cy={p.y}
                                     r="6"
                                     fill="var(--bg-dark)"
-                                    stroke="url(#lineGradient)"
+                                    stroke={isAll ? "url(#lineGradient)" : selectedProjectColor}
                                     strokeWidth="3"
                                     initial={{ scale: 0 }}
                                     whileInView={{ scale: 1 }}
