@@ -59,7 +59,7 @@ import Tasks from './Tasks';
 import AnimatedSelect from './AnimatedSelect';
 
 // --- Projects Management Component ---
-const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTask, globalSearch = '', onCreateProject }) => {
+const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTask, globalSearch = '', onCreateProject, onDeleteProject }) => {
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
     const [filterStatus, setFilterStatus] = useState('All');
     const [sortBy, setSortBy] = useState('Newest');
@@ -110,9 +110,7 @@ const Projects = ({ projects, setProjects, tasks = [], onCreateTask, onUpdateTas
     };
 
     const deleteProject = (id) => {
-        if (window.confirm('Are you sure you want to delete this project?')) {
-            setProjects(projects.filter(p => p.id !== id));
-        }
+        onDeleteProject(id);
     };
 
     const formatDate = (dateString) => {

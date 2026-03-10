@@ -68,7 +68,9 @@ import CreateTaskModal from './dashboard/CreateTaskModal';
 import Tasks from './dashboard/Tasks';
 import Messages from './dashboard/Messages';
 import SettingsPage from './dashboard/SettingsPage';
-import { createProject, createTeam, createTask, addTeamMember, removeTeamMember, updateProject, deleteProject, updateTask, deleteTask } from '../services/api';
+import TeamRequiredModal from './dashboard/TeamRequiredModal';
+import ProjectRequiredModal from './dashboard/ProjectRequiredModal';
+import { createProject, createTeam, createTask, addTeamMember, removeTeamMember, updateProject, deleteProject, updateTask, deleteTask, deleteTeam } from '../services/api';
 
 // --- Main Dashboard Component ---
 const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' } }) => {
@@ -85,10 +87,27 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
     // Grab state from unified Data context
     const { projects, setProjects, teams, setTeams, tasks, setTasks, userProfile, setUserProfile } = useData();
 
-    const [activeModal, setActiveModal] = useState(null); // 'project', 'team', 'task', 'addMember'
+    const [activeModal, setActiveModal] = useState(null); // 'project', 'team', 'task', 'addMember', 'teamRequired', 'projectRequired'
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [prefilledProject, setPrefilledProject] = useState(null);
     const [notification, setNotification] = useState(null);
+
+    const handleOpenCreateProject = () => {
+        if (teams.length === 0) {
+            setActiveModal('teamRequired');
+        } else {
+            setActiveModal('project');
+        }
+    };
+
+    const handleOpenCreateTask = (projectName = null) => {
+        if (projects.length === 0) {
+            setActiveModal('projectRequired');
+        } else {
+            if (projectName) setPrefilledProject(projectName);
+            setActiveModal('task');
+        }
+    };
 
     const showNotification = (msg) => {
         setNotification(msg);
@@ -281,20 +300,44 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
         }
     };
 
-    const handleDeleteTeam = (id) => {
+    const handleDeleteProject = async (id) => {
+        if (window.confirm("Are you sure you want to delete this project? Associated tasks will also be removed.")) {
+            try {
+                await deleteProject(id);
+                setProjects(projects.filter(p => p.id !== id && p._id !== id));
+                // Also remove tasks associated with this project in local state
+                setTasks(tasks.filter(t => t.project !== id && t.projectId !== id));
+                showNotification("Project deleted successfully");
+            } catch (error) {
+                console.error("Error deleting project", error);
+                showNotification("Failed to delete project");
+            }
+        }
+    };
+
+    const handleDeleteTeam = async (id) => {
         const teamToDelete = teams.find(t => t.id === id || t._id === id);
         if (teamToDelete) {
-            if (window.confirm(`Are you sure you want to delete the team "${teamToDelete.name}"? Associated tasks will also be removed.`)) {
+            if (window.confirm(`Are you sure you want to delete the team "${teamToDelete.name}"? Associated projects and tasks will also be removed.`)) {
+                try {
+                    await deleteTeam(id);
 
-                // 1. Remove team from state
-                setTeams(teams.filter(t => t.id !== id && t._id !== id));
+                    // 1. Remove team from state
+                    setTeams(teams.filter(t => t.id !== id && t._id !== id));
 
-                // 2. Remove associated tasks if linked (by team member name, or team name)
-                const teamMemberNames = (teamToDelete.membersList || []).map(m => typeof m === 'object' ? m.name : m);
-                setTasks(tasks.filter(t => !teamMemberNames.includes(t.member) && t.team !== teamToDelete.name));
+                    // 2. Remove associated projects and tasks from state
+                    const teamName = teamToDelete.name;
+                    const affectedProjects = projects.filter(p => p.team === teamName);
+                    const affectedProjectIds = affectedProjects.map(p => p._id || p.id);
 
-                showNotification("Team deleted successfully");
-                // TODO: Delete team API
+                    setProjects(projects.filter(p => p.team !== teamName));
+                    setTasks(tasks.filter(t => !affectedProjectIds.includes(t.project) && !affectedProjectIds.includes(t.projectId)));
+
+                    showNotification("Team deleted successfully");
+                } catch (error) {
+                    console.error("Error deleting team", error);
+                    showNotification("Failed to delete team");
+                }
             }
         }
     };
@@ -527,7 +570,7 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                                     teams={teams}
                                     tasks={tasks}
                                     onNavigateToProjects={() => setActiveTab('Projects')}
-                                    onCreateProject={() => setActiveModal('project')}
+                                    onCreateProject={handleOpenCreateProject}
                                     globalSearch={searchQuery}
                                 />
                             </motion.div>
@@ -545,12 +588,10 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                                     setProjects={setProjects}
                                     tasks={tasks}
                                     onUpdateTask={toggleTaskCompletion}
-                                    onCreateTask={(projectName) => {
-                                        setPrefilledProject(projectName);
-                                        setActiveModal('task');
-                                    }}
+                                    onCreateTask={handleOpenCreateTask}
                                     globalSearch={searchQuery}
-                                    onCreateProject={() => setActiveModal('project')}
+                                    onCreateProject={handleOpenCreateProject}
+                                    onDeleteProject={handleDeleteProject}
                                 />
                             </motion.div>
                         )}
@@ -565,7 +606,7 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                                 <Tasks
                                     tasks={tasks}
                                     onMoveTask={moveTask}
-                                    onCreateTask={() => setActiveModal('task')}
+                                    onCreateTask={() => handleOpenCreateTask()}
                                     onDeleteTask={handleDeleteTask}
                                     globalSearch={searchQuery}
                                 />
@@ -642,6 +683,17 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                     </AnimatePresence>
                 </main>
             </div>
+
+            <TeamRequiredModal
+                isOpen={activeModal === 'teamRequired'}
+                onClose={() => setActiveModal(null)}
+                onCreateTeam={() => setActiveModal('team')}
+            />
+            <ProjectRequiredModal
+                isOpen={activeModal === 'projectRequired'}
+                onClose={() => setActiveModal(null)}
+                onCreateProject={handleOpenCreateProject}
+            />
 
             <CreateProjectModal
                 isOpen={activeModal === 'project'}

@@ -1,5 +1,7 @@
 const Team = require('../models/Team');
 const User = require('../models/User');
+const Project = require('../models/Project');
+const Task = require('../models/Task');
 
 // @desc    Get all teams created by user
 // @route   GET /api/teams
@@ -131,10 +133,46 @@ const getTeamById = async (req, res) => {
     }
 };
 
+// @desc    Delete team
+// @route   DELETE /api/teams/:id
+// @access  Private
+const deleteTeam = async (req, res) => {
+    try {
+        const team = await Team.findById(req.params.id);
+
+        if (!team) {
+            res.status(404);
+            throw new Error('Team not found');
+        }
+
+        if (team.createdBy.toString() !== req.user.id) {
+            res.status(401);
+            throw new Error('User not authorized');
+        }
+
+        // Optional: Cascade delete projects and tasks for this team
+        // Find projects by team name (as it's stored as a string in Project model)
+        const teamProjects = await Project.find({ team: team.name });
+        const projectIds = teamProjects.map(p => p._id);
+
+        if (projectIds.length > 0) {
+            await Task.deleteMany({ project: { $in: projectIds } });
+            await Project.deleteMany({ _id: { $in: projectIds } });
+        }
+
+        await team.deleteOne();
+
+        res.status(200).json({ id: req.params.id });
+    } catch (error) {
+        res.status(res.statusCode || 500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getTeams,
     createTeam,
     addMember,
     removeMember,
-    getTeamById
+    getTeamById,
+    deleteTeam
 };

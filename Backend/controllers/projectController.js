@@ -1,4 +1,5 @@
 const Project = require('../models/Project');
+const Task = require('../models/Task');
 
 // @desc    Get all projects for the logged in user
 // @route   GET /api/projects
@@ -118,6 +119,9 @@ const deleteProject = async (req, res) => {
             res.status(401);
             throw new Error('User not authorized');
         }
+
+        // Delete associated tasks
+        await Task.deleteMany({ project: req.params.id });
 
         await project.deleteOne();
 

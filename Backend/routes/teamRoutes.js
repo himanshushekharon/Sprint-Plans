@@ -5,7 +5,8 @@ const {
     createTeam,
     addMember,
     removeMember,
-    getTeamById
+    getTeamById,
+    deleteTeam
 } = require('../controllers/teamController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -14,7 +15,8 @@ router.route('/')
     .post(protect, createTeam);
 
 router.route('/:id')
-    .get(protect, getTeamById);
+    .get(protect, getTeamById)
+    .delete(protect, deleteTeam);
 
 router.put('/:id/add', protect, addMember);
 router.put('/:id/remove', protect, removeMember);

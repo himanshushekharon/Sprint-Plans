@@ -63,6 +63,11 @@ export const removeTeamMember = async (id, memberId) => {
     return response.data;
 };
 
+export const deleteTeam = async (id) => {
+    const response = await api.delete(`/teams/${id}`);
+    return response.data;
+};
+
 // Tasks
 export const getTasksByProject = async (projectId) => {
     const response = await api.get(`/tasks/project/${projectId}`);
