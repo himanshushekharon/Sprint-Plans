@@ -66,8 +66,8 @@ import ManageProjectsModal from './dashboard/ManageProjectsModal';
 import Teams from './dashboard/Teams';
 import CreateTaskModal from './dashboard/CreateTaskModal';
 import Tasks from './dashboard/Tasks';
-import Messages from './dashboard/Messages';
 import SettingsPage from './dashboard/SettingsPage';
+import ChatbotWidget from './ChatbotWidget';
 import TeamRequiredModal from './dashboard/TeamRequiredModal';
 import ProjectRequiredModal from './dashboard/ProjectRequiredModal';
 import { createProject, createTeam, createTask, addTeamMember, removeTeamMember, updateProject, deleteProject, updateTask, deleteTask, deleteTeam } from '../services/api';
@@ -221,6 +221,42 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
         // TODO: Backend API for updating team projects
     };
 
+    const handleProjectProgressUpdate = (updatedTasks) => {
+        let projectsToUpdate = [];
+        
+        const newProjects = projects.map(proj => {
+            const projId = proj._id || proj.id;
+            const projName = proj.name;
+            const projTasks = updatedTasks.filter(t => 
+                t.project === projName || 
+                t.project === projId || 
+                t.projectId === projId || 
+                (t.project && t.project._id === projId)
+            );
+            
+            let newProgress = 0;
+            if (projTasks.length > 0) {
+                const total = projTasks.reduce((sum, t) => sum + (t.progress || (t.status === 'Completed' ? 100 : (t.status === 'In Progress' ? 50 : 0))), 0);
+                newProgress = Math.round(total / projTasks.length);
+            }
+            
+            if (newProgress !== proj.progress) {
+                projectsToUpdate.push({ id: projId, progress: newProgress });
+                return { ...proj, progress: newProgress };
+            }
+            return proj;
+        });
+
+        if (projectsToUpdate.length > 0) {
+            setProjects(newProjects);
+            for (let update of projectsToUpdate) {
+                if (update.id) {
+                    updateProject(update.id, { progress: update.progress }).catch(e => console.error("Error syncing project progress", e));
+                }
+            }
+        }
+    };
+
     const addTask = async (ta) => {
         try {
             // Need the project ID from its name to associate in DB
@@ -237,7 +273,9 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                 assignedTo: ta.member // assuming assignedTo is needed by backend or we wait for backend updates mapped to member
             });
             // We append the project name for frontend display since backend might return ID
-            setTasks([{ ...newTask, id: newTask._id, project: ta.project, member: ta.member }, ...tasks]);
+            const newTasksList = [{ ...newTask, id: newTask._id, project: ta.project, member: ta.member }, ...tasks];
+            setTasks(newTasksList);
+            handleProjectProgressUpdate(newTasksList);
             setActiveModal(null);
             setPrefilledProject(null);
             showNotification("Task created successfully!");
@@ -253,7 +291,9 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
         const oldTasks = [...tasks];
         try {
             const progress = newStatus === 'Completed' ? 100 : (newStatus === 'In Progress' ? 50 : 0);
-            setTasks(tasks.map(t => (t.id === id || t._id === id) ? { ...t, status: newStatus, progress } : t));
+            const newTasksList = tasks.map(t => (t.id === id || t._id === id) ? { ...t, status: newStatus, progress } : t);
+            setTasks(newTasksList);
+            handleProjectProgressUpdate(newTasksList);
             await updateTask(id, { status: newStatus, progress });
         } catch (error) {
             console.error("Error updating task status", error);
@@ -270,7 +310,7 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
 
         try {
             const progress = newStatus === 'Completed' ? 100 : 0;
-            setTasks(tasks.map(t => {
+            const newTasksList = tasks.map(t => {
                 if (t.id === id || t._id === id) {
                     return {
                         ...t,
@@ -280,7 +320,9 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                     };
                 }
                 return t;
-            }));
+            });
+            setTasks(newTasksList);
+            handleProjectProgressUpdate(newTasksList);
             await updateTask(id, { status: newStatus, progress, completedAt: newStatus === 'Completed' ? new Date().toISOString() : null });
         } catch (error) {
             console.error("Error updating task completion", error);
@@ -291,7 +333,9 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
         if (window.confirm("Are you sure you want to delete this task?")) {
             try {
                 await deleteTask(id);
-                setTasks(tasks.filter(t => t.id !== id && t._id !== id));
+                const newTasksList = tasks.filter(t => t.id !== id && t._id !== id);
+                setTasks(newTasksList);
+                handleProjectProgressUpdate(newTasksList);
                 showNotification("Task deleted successfully");
             } catch (error) {
                 console.error("Error deleting task", error);
@@ -347,7 +391,6 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
         { name: 'Projects', icon: <FolderKanban size={20} /> },
         { name: 'Tasks', icon: <CheckCircle size={20} /> },
         { name: 'Team', icon: <Users size={20} /> },
-        { name: 'Messages', icon: <MessageSquare size={20} /> },
         { name: 'Settings', icon: <Settings size={20} /> }
     ];
 
@@ -638,17 +681,6 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                                 />
                             </motion.div>
                         )}
-                        {activeTab === 'Messages' && (
-                            <motion.div
-                                key="messages"
-                                initial={{ opacity: 0, x: -20, filter: 'blur(10px)' }}
-                                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                                exit={{ opacity: 0, x: 20, filter: 'blur(10px)' }}
-                                transition={{ duration: 0.5, ease: [0.19, 1, 0.22, 1] }}
-                            >
-                                <Messages teams={teams} globalSearch={searchQuery} />
-                            </motion.div>
-                        )}
                         {activeTab === 'Settings' && (
                             <motion.div
                                 key="settings"
@@ -667,7 +699,7 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                                 />
                             </motion.div>
                         )}
-                        {activeTab !== 'Overview' && activeTab !== 'Projects' && activeTab !== 'Team' && activeTab !== 'Tasks' && activeTab !== 'Messages' && activeTab !== 'Settings' && (
+                        {activeTab !== 'Overview' && activeTab !== 'Projects' && activeTab !== 'Team' && activeTab !== 'Tasks' && activeTab !== 'Settings' && (
                             <motion.div
                                 key="placeholder"
                                 initial={{ opacity: 0, x: -20, filter: 'blur(10px)' }}
@@ -730,6 +762,8 @@ const Dashboard = ({ onLogout, theme, toggleTheme, user = { name: 'Alex Rivera' 
                 projects={projects}
                 teams={teams}
             />
+
+            <ChatbotWidget />
 
             <style>{`
                 .dashboard-layout {
