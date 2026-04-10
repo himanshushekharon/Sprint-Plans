@@ -4,7 +4,7 @@
 
 ## ✨ Key Features
 
-*   **🔒 Secure Authentication:** Robust user login and registration powered by **JWT** (JSON Web Tokens) and **Bcrypt** password hashing.
+*   **🔒 Secure Authentication:** Robust, multi-provider user login and registration powered by **Clerk** (Google, GitHub, and Email).
 *   **📊 Dynamic Flow Dashboard:** A premium, interactive dashboard with real-time data visualization (Sprint Velocity, Task Distribution, and Project Health).
 *   **🌓 Adaptive Theme Engine:** Seamless Light and Dark mode toggling with glassmorphism UI effects that adapt instantly.
 *   **📂 Project & Task Management:** Create projects, assign tasks to team members, set priorities, and track progress deadlines.
@@ -22,7 +22,7 @@
 **Backend (Server)**
 *   **[Node.js](https://nodejs.org/) & [Express.js](https://expressjs.com/)** - Fast and minimalist web framework
 *   **[MongoDB](https://www.mongodb.com/) & [Mongoose](https://mongoosejs.com/)** - Flexible NoSQL database schema management
-*   **[JWT](https://jwt.io/) & [Bcryptjs](https://www.npmjs.com/package/bcryptjs)** - For secure cryptographic authentication protocols
+*   **[Clerk](https://clerk.com/)** - Complete User Management and secure Authentication protocols
 
 ## 🚀 Getting Started
 
