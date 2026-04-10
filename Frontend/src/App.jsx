@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import Dashboard from './components/Dashboard';
 import { useData } from './context/DataContext';
+import { useAuth, useUser } from '@clerk/clerk-react';
 
 const Features = lazy(() => import('./components/Features'));
 const About = lazy(() => import('./components/About'));
@@ -20,25 +21,35 @@ function App() {
   const requestRef = useRef();
   const { loadUserData, clearUserData } = useData();
 
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user: clerkUser } = useUser();
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(theme);
   }, [theme]);
 
-  // Load user session on mount
+  // Inside App Component:
+
+  // Load user session using Clerk
   useEffect(() => {
-    const loggedInEmail = localStorage.getItem('loggedInUser');
-    if (loggedInEmail) {
-      const name = loggedInEmail.split('@')[0];
+    if (isLoaded && isSignedIn && clerkUser) {
+      const email = clerkUser.primaryEmailAddress?.emailAddress || 'user@example.com';
+      const name = clerkUser.fullName || email.split('@')[0];
+      
       setUser({
         name: name.charAt(0).toUpperCase() + name.slice(1),
-        email: loggedInEmail
+        email: email,
+        imageUrl: clerkUser.imageUrl
       });
-      loadUserData(loggedInEmail, name.charAt(0).toUpperCase() + name.slice(1));
+      
+      loadUserData(email, name.charAt(0).toUpperCase() + name.slice(1));
       setCurrentPage('dashboard');
+    } else if (isLoaded && !isSignedIn && currentPage === 'dashboard') {
+      setCurrentPage('landing');
     }
-  }, []);
+  }, [isLoaded, isSignedIn, clerkUser]);
 
   const toggleTheme = () => {
     setTheme(prev => {

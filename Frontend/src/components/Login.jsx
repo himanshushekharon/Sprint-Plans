@@ -1,79 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowRight, Layers, Github, Chrome } from 'lucide-react';
-import { useData } from '../context/DataContext';
+import { Layers } from 'lucide-react';
+import { SignIn } from '@clerk/clerk-react';
 
-const Login = ({ onSignup, onHome, onSuccess, setUser }) => {
-    const [loading, setLoading] = useState(false);
-    const [errorMsg, setErrorMsg] = useState(null);
-
-    const [formData, setFormData] = useState({
-        email: '',
-        password: ''
-    });
-    const { loadUserData } = useData();
-
-    const handleInput = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setErrorMsg(null);
-        setLoading(true);
-
-        try {
-            const response = await fetch('http://localhost:5000/api/users/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: formData.email,
-                    password: formData.password
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Invalid credentials');
-            }
-
-            // Save auth token and user
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('loggedInUser', data.email);
-
-            // Keep initializing empty arrays in localStorage if they don't exist for the DataContext
-            if (!localStorage.getItem(data.email)) {
-                localStorage.setItem(data.email, JSON.stringify({
-                    email: data.email,
-                    projects: [],
-                    tasks: [],
-                    teams: [],
-                    members: []
-                }));
-            }
-
-            const name = data.name || data.email.split('@')[0];
-
-            if (setUser) {
-                setUser({
-                    name: name.charAt(0).toUpperCase() + name.slice(1),
-                    email: data.email
-                });
-            }
-
-            loadUserData(data.email, name);
-
-            // Trigger dashboard navigation on submit
-            if (onSuccess) onSuccess();
-
-        } catch (error) {
-            setErrorMsg(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+const Login = ({ onHome }) => {
     return (
         <div className="login-page">
 
@@ -116,77 +46,21 @@ const Login = ({ onSignup, onHome, onSuccess, setUser }) => {
                     transition={{ duration: 0.8 }}
                     className="login-form-section"
                 >
-                    <div className="glass-card login-card">
-                        <div className="form-header">
-                            <h3>Welcome back</h3>
-                            <p>Enter your credentials to access your account.</p>
-                        </div>
-
-                        {errorMsg && (
-                            <div style={{ background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', padding: '10px', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center', fontSize: '14px', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
-                                {errorMsg}
-                            </div>
-                        )}
-
-                        <div className="social-login">
-                            <button className="social-btn"><Chrome size={18} /> Google</button>
-                            <button className="social-btn"><Github size={18} /> GitHub</button>
-                        </div>
-
-                        <div className="divider"><span>Or continue with email</span></div>
-
-                        <form className="login-form" onSubmit={handleSubmit}>
-                            <div className="input-group">
-                                <label><Mail size={16} /> Email Address</label>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    placeholder="john@example.com"
-                                    onChange={handleInput}
-                                    required
-                                />
-                            </div>
-
-                            <div className="input-group">
-                                <label>
-                                    <div className="label-row">
-                                        <div className="label-left"><Lock size={16} /> Password</div>
-                                        <a href="#" className="forgot-link">Forgot?</a>
-                                    </div>
-                                </label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    placeholder="••••••••"
-                                    onChange={handleInput}
-                                    required
-                                />
-                            </div>
-
-                            <button type="submit" className="btn-primary login-btn" disabled={loading}>
-                                <span>{loading ? 'Signing In...' : 'Sign In'}</span>
-                                {!loading && <ArrowRight size={18} />}
-                            </button>
-                        </form>
-
-                        <div className="form-footer">
-                            <p>Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); onSignup(); }}>Create one free</a></p>
-                            <button
-                                className="back-link"
-                                onClick={onHome}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--text-dim)',
-                                    marginTop: '1.5rem',
-                                    cursor: 'pointer',
-                                    fontSize: '0.85rem'
-                                }}
-                            >
-                                ← Back to Home
-                            </button>
-                        </div>
-                    </div>
+                    <SignIn routing="hash" />
+                    <button
+                        className="back-link"
+                        onClick={onHome}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-dim)',
+                            marginTop: '1.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                        }}
+                    >
+                        ← Back to Home
+                    </button>
                 </motion.div>
             </div>
 

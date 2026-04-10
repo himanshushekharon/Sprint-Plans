@@ -1,89 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, Users, ArrowRight, ShieldCheck, Zap, Layers } from 'lucide-react';
-import { useData } from '../context/DataContext';
+import { ShieldCheck, Zap, Layers, Users } from 'lucide-react';
+import { SignUp } from '@clerk/clerk-react';
 
-const Signup = ({ onLogin, onHome, onSuccess, setUser }) => {
-    const [loading, setLoading] = useState(false);
-    const [errorMsg, setErrorMsg] = useState(null);
-
-    const [formData, setFormData] = useState({
-        fullName: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        teamCode: ''
-    });
-    const { loadUserData } = useData();
-
-    const handleInput = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setErrorMsg(null);
-
-        if (formData.password !== formData.confirmPassword) {
-            setErrorMsg("Passwords do not match");
-            return;
-        }
-
-        setLoading(true);
-
-        try {
-            const name = formData.fullName || formData.email.split('@')[0];
-
-            const response = await fetch('http://localhost:5000/api/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name,
-                    email: formData.email,
-                    password: formData.password
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Something went wrong');
-            }
-
-            // Save auth token and user
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('loggedInUser', data.email);
-
-            // Keep initializing empty arrays in localStorage if they don't exist for the DataContext
-            if (!localStorage.getItem(data.email)) {
-                localStorage.setItem(data.email, JSON.stringify({
-                    email: data.email,
-                    projects: [],
-                    tasks: [],
-                    teams: [],
-                    members: []
-                }));
-            }
-
-            if (setUser) {
-                setUser({
-                    name: data.name.charAt(0).toUpperCase() + data.name.slice(1),
-                    email: data.email
-                });
-            }
-
-            loadUserData(data.email, name);
-
-            // Trigger dashboard navigation on submit
-            if (onSuccess) onSuccess();
-
-        } catch (error) {
-            setErrorMsg(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+const Signup = ({ onLogin, onHome }) => {
     return (
         <div className="signup-page">
 
@@ -130,91 +50,21 @@ const Signup = ({ onLogin, onHome, onSuccess, setUser }) => {
                     transition={{ duration: 0.8 }}
                     className="signup-form-section"
                 >
-                    <div className="glass-card signup-card">
-                        <div className="form-header">
-                            <h3>Create your account</h3>
-                            <p>Join 50k+ teams building with Sprint.</p>
-                        </div>
-
-                        {errorMsg && (
-                            <div style={{ background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', padding: '10px', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center', fontSize: '14px', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
-                                {errorMsg}
-                            </div>
-                        )}
-
-
-
-                        <form className="signup-form" onSubmit={handleSubmit}>
-                            <div className="input-grid">
-                                <div className="input-group">
-                                    <label><User size={16} /> Full Name</label>
-                                    <input
-                                        type="text"
-                                        name="fullName"
-                                        placeholder="John Doe"
-                                        onChange={handleInput}
-                                        required
-                                    />
-                                </div>
-                                <div className="input-group">
-                                    <label><Mail size={16} /> Email Address</label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        placeholder="john@example.com"
-                                        onChange={handleInput}
-                                        required
-                                    />
-                                </div>
-
-
-
-                                <div className="input-group">
-                                    <label><Lock size={16} /> Password</label>
-                                    <input
-                                        type="password"
-                                        name="password"
-                                        placeholder="••••••••"
-                                        onChange={handleInput}
-                                        required
-                                    />
-                                </div>
-                                <div className="input-group">
-                                    <label><Lock size={16} /> Confirm Password</label>
-                                    <input
-                                        type="password"
-                                        name="confirmPassword"
-                                        placeholder="••••••••"
-                                        onChange={handleInput}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <button type="submit" className="btn-primary signup-btn" disabled={loading}>
-                                <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
-                                {!loading && <ArrowRight size={18} />}
-                            </button>
-                        </form>
-
-                        <div className="form-footer">
-                            <p>Already have an account? <a href="#" onClick={(e) => { e.preventDefault(); onLogin(); }}>Log In</a></p>
-                            <button
-                                className="back-link"
-                                onClick={onHome}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--text-dim)',
-                                    marginTop: '1.5rem',
-                                    cursor: 'pointer',
-                                    fontSize: '0.85rem'
-                                }}
-                            >
-                                ← Back to Home
-                            </button>
-                        </div>
-                    </div>
+                    <SignUp routing="hash" />
+                    <button
+                        className="back-link"
+                        onClick={onHome}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-dim)',
+                            marginTop: '1.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                        }}
+                    >
+                        ← Back to Home
+                    </button>
                 </motion.div>
             </div>
 
