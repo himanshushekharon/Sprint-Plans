@@ -1,6 +1,6 @@
 # 🚀 Sprint Plans
 
-**Sprint Plans** is a state-of-the-art project management and team collaboration platform. Designed with a focus on modern aesthetics and smooth user experiences, it helps teams track progress, manage tasks, and optimize their workflow velocity.
+**Sprint Plans** is a modern, state-of-the-art project management and team collaboration platform. It offers a sleek, intuitive interface for teams to visually track progress, assign tasks, and organize sprints effectively. Equipped with real-time data visualization, responsive glassmorphism design, and robust secure authentication, it acts as a central hub to optimize team productivity and workflow velocity.
 
 ## ✨ Key Features
 
@@ -14,15 +14,18 @@
 ## 🛠️ Technology Stack
 
 **Frontend (Client)**
-*   **[React.js](https://reactjs.org/)** (via Vite) - Component-based UI formulation
-*   **[Framer Motion](https://www.framer.com/motion/)** - High-performance complex CSS animations
-*   **[Lucide React](https://lucide.dev/)** - Beautiful, consistent iconography
-*   **Vanilla CSS** - Custom variables and advanced styling (no bulky CSS frameworks)
+*   **[React 19](https://reactjs.org/)** (via **Vite**) - Component-based UI formulation
+*   **[Framer Motion](https://www.framer.com/motion/)** - High-performance scroll and layout animations
+*   **[Clerk](https://clerk.com/)** (`@clerk/clerk-react`) - Seamless social and email authentication
+*   **[Lucide React](https://lucide.dev/)** - Beautiful, consistent SVG iconography
+*   **Axios** - Promise-based HTTP client for API requests
+*   **OGL & Vanilla CSS** - Custom WebGL particles and advanced styling without bulky frameworks
 
 **Backend (Server)**
 *   **[Node.js](https://nodejs.org/) & [Express.js](https://expressjs.com/)** - Fast and minimalist web framework
 *   **[MongoDB](https://www.mongodb.com/) & [Mongoose](https://mongoosejs.com/)** - Flexible NoSQL database schema management
-*   **[Clerk](https://clerk.com/)** - Complete User Management and secure Authentication protocols
+*   **JWT & Bcrypt.js** - Secure token-based authentication encoding
+*   **CORS & Dotenv** - Cross-origin resource sharing and environment configurations
 
 ## 🚀 Getting Started
 
