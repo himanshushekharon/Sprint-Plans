@@ -73,23 +73,17 @@ export const DataProvider = ({ children }) => {
             setTeams(mappedTeams);
             setTasks(mappedTasks);
 
-            // Load profile from local storage if available, we can later move this to backend /me endpoint
-            const storedData = localStorage.getItem(email);
-            const data = storedData ? JSON.parse(storedData) : null;
-
-            if (data && data.userProfile) {
-                setUserProfile(data.userProfile);
-            } else {
-                setUserProfile(prev => {
-                    const displayName = name || prev.name;
-                    return {
-                        ...prev,
-                        email: email,
-                        name: displayName,
-                        username: displayName.toLowerCase().replace(/\s+/g, '') + Math.floor(Math.random() * 900 + 100)
-                    };
-                });
-            }
+            // ALWAYS update profile from the verified Clerk data passed in via 'name' and 'email'
+            // We ignore local storage for profile to avoid stale data (like 'Tom')
+            setUserProfile(prev => {
+                const displayName = name || prev.name || 'User';
+                return {
+                    ...prev,
+                    email: email,
+                    name: displayName,
+                    username: displayName.toLowerCase().replace(/\s+/g, '') + Math.floor(Math.random() * 900 + 100)
+                };
+            });
         } catch (error) {
             console.error("Error loading data from API:", error);
             // Fallback to local storage if API fails
@@ -101,19 +95,15 @@ export const DataProvider = ({ children }) => {
             setTasks(data.tasks || []);
             setMembers(data.members || []);
 
-            if (data.userProfile) {
-                setUserProfile(data.userProfile);
-            } else {
-                setUserProfile(prev => {
-                    const displayName = name || prev.name;
-                    return {
-                        ...prev,
-                        email: email,
-                        name: displayName,
-                        username: displayName.toLowerCase().replace(/\s+/g, '') + Math.floor(Math.random() * 900 + 100)
-                    };
-                });
-            }
+            setUserProfile(prev => {
+                const displayName = name || prev.name || 'User';
+                return {
+                    ...prev,
+                    email: email,
+                    name: displayName,
+                    username: displayName.toLowerCase().replace(/\s+/g, '') + Math.floor(Math.random() * 900 + 100)
+                };
+            });
         }
 
         isLoaded.current = true;

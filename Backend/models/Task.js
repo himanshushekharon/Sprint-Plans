@@ -11,7 +11,7 @@ const taskSchema = mongoose.Schema({
     completedAt: { type: Date },
     project: { type: String }, // Storing project name string for frontend compatibility, or ObjectId
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' }, // actual db rel
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    assignedTo: { type: String, ref: 'User' },
     member: { type: String }, // String representation for frontend
     assigneeAvatar: { type: String }, // Avatar string or object
     progress: { type: Number, default: 0 }

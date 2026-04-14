@@ -11,8 +11,8 @@ const projectSchema = mongoose.Schema({
     team: { type: String }, // Team name like 'Design Team' or 'Team Alpha'
     budget: { type: String },
     color: { type: String, default: 'var(--primary)' },
-    owner: { type: mongoose.Schema.Types.ObjectId, required: false, ref: 'User' },
-    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+    owner: { type: String, required: false, ref: 'User' },
+    members: [{ type: String, ref: 'User' }]
 }, {
     timestamps: true
     // strict: false // (optional) if we want to allow arbitrary frontend fields
