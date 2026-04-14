@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api', // Hardcoded for now based on your backend setup
+    baseURL: import.meta.env.VITE_API_URL || 'https://sprint-plans-backend.onrender.com/api',
 });
 
 // Add a request interceptor to inject the live Clerk token
